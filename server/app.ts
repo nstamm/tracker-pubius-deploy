@@ -166,7 +166,12 @@ export async function buildApp(options: AppOptions) {
   app.get("/api/auth/session", async () => ({ user: { email: options.authEmail } }));
 
   app.post("/api/auth/logout", async (_request, reply) => {
-    reply.clearCookie(SESSION_COOKIE, { path: "/" });
+    reply.clearCookie(SESSION_COOKIE, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "strict",
+      secure: options.cookieSecure,
+    });
     return reply.code(204).send();
   });
 

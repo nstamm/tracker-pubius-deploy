@@ -67,6 +67,21 @@ describe("authentication", { timeout: 15_000 }, () => {
     });
     expect(blocked.statusCode).toBe(429);
   });
+
+  it("clears the signed session on logout", async () => {
+    const app = await createTestApp();
+    const cookie = await login(app);
+    const logout = await app.inject({ method: "POST", url: "/api/auth/logout", headers: { cookie } });
+
+    expect(logout.statusCode).toBe(204);
+    const clearedCookie = logout.headers["set-cookie"]!;
+    const session = await app.inject({
+      method: "GET",
+      url: "/api/auth/session",
+      headers: { cookie: (Array.isArray(clearedCookie) ? clearedCookie[0] : clearedCookie).split(";", 1)[0] },
+    });
+    expect(session.statusCode).toBe(401);
+  });
 });
 
 describe("financial records", () => {

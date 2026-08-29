@@ -23,7 +23,7 @@ export default defineConfig(() => ({
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webp}"],
       },
-      includeAssets: ["favicon.ico"],
+      includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
         name: "Pubius Tracker",
         short_name: "Pubius",
@@ -48,7 +48,7 @@ export default defineConfig(() => ({
             src: "/pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "maskable",
+            purpose: "any maskable",
           },
         ],
       },

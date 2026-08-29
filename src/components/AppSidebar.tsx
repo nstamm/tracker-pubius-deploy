@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { DollarSign, ArrowLeftRight, Wallet, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { api } from "@/lib/api";
+import { api, getErrorMessage } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -16,7 +17,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 
 const menuItems = [
   {
@@ -40,11 +40,19 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    await api.auth.logout();
-    toast.success("Sesión cerrada");
-    navigate("/auth");
+    setIsLoggingOut(true);
+    try {
+      await api.auth.logout();
+      toast.success("Sesión cerrada");
+      navigate("/auth", { replace: true });
+    } catch (error) {
+      toast.error(getErrorMessage(error, "No se pudo cerrar la sesión"));
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -80,15 +88,9 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Cerrar Sesión">
-              <Button
-                variant="ghost"
-                onClick={handleLogout}
-                className="w-full justify-start gap-3"
-              >
-                <LogOut className="h-4 w-4" />
-                {!isCollapsed && <span>Cerrar Sesión</span>}
-              </Button>
+            <SidebarMenuButton tooltip="Cerrar Sesión" onClick={handleLogout} disabled={isLoggingOut}>
+              <LogOut className="h-4 w-4" />
+              {!isCollapsed && <span>{isLoggingOut ? "Cerrando..." : "Cerrar Sesión"}</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
