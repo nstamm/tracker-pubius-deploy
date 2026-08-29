@@ -1,0 +1,167 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
+
+interface ChartData {
+  date: string;
+  ganancia: number;
+  monto_total: number;
+  [key: string]: string | number;
+}
+
+interface GainsChartProps {
+  data: ChartData[];
+}
+
+const typeColors: { [key: string]: string } = {
+  zelle: "hsl(270, 70%, 60%)",
+  paypal: "hsl(199, 89%, 65%)",
+  skrill: "hsl(271, 91%, 65%)",
+  binance: "hsl(38, 92%, 50%)",
+  slash: "hsl(345, 80%, 35%)",
+  mercury: "hsl(0, 0%, 100%)",
+  "a definir": "hsl(var(--muted-foreground))",
+  otros: "hsl(var(--accent))",
+};
+
+interface TooltipEntry {
+  color: string;
+  name: string;
+  value: number;
+  payload: ChartData;
+}
+
+interface LegendEntry {
+  color: string;
+  value: string;
+}
+
+const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipEntry[] }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-card border border-border p-3 rounded-lg shadow-lg">
+        <p className="text-sm text-muted-foreground mb-2">{data.date}</p>
+        <p className="text-xs text-muted-foreground">Monto Total:</p>
+        <p className="text-lg font-semibold text-foreground mb-2">
+          ${data.monto_total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+        </p>
+        <div className="space-y-1">
+          {payload.map((entry, index) => (
+            <div key={index} className="flex items-center justify-between gap-4">
+              <span className="text-xs capitalize" style={{ color: entry.color }}>
+                {entry.name}:
+              </span>
+              <span className="text-sm font-semibold" style={{ color: entry.color }}>
+                ${entry.value.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+const CustomLegend = ({ payload }: { payload?: LegendEntry[] }) => {
+  if (!payload) return null;
+  
+  const filteredPayload = payload.filter((entry) => entry.value !== "a definir");
+  
+  return (
+    <div className="flex flex-wrap justify-center gap-3 pt-4">
+      {filteredPayload.map((entry, index) => (
+        <div key={index} className="flex items-center gap-1.5">
+          <span 
+            className="w-2 h-2 rounded-full" 
+            style={{ backgroundColor: entry.color }}
+          />
+          <span className="text-[10px] text-muted-foreground capitalize">
+            {entry.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const GainsChart = ({ data }: GainsChartProps) => {
+  // Get all unique operation types from the data
+  const operationTypes = Array.from(
+    new Set(
+      data.flatMap(item => 
+        Object.keys(item).filter(key => 
+          key !== 'date' && key !== 'ganancia' && key !== 'monto_total'
+        )
+      )
+    )
+  );
+
+  return (
+    <Card className="col-span-full overflow-hidden">
+      <CardHeader className="p-4 md:p-6">
+        <CardTitle className="text-base md:text-lg">Ganancias Diarias por Tipo de Operación</CardTitle>
+      </CardHeader>
+      <CardContent className="p-2 md:p-6 w-full min-w-0">
+        <div className="h-[200px] md:h-[400px] w-full min-w-0 max-w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart 
+              data={data}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
+            <defs>
+              {operationTypes.map((tipo) => (
+                <linearGradient key={tipo} id={`color${tipo}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop 
+                    offset="5%" 
+                    stopColor={typeColors[tipo] || typeColors.otros} 
+                    stopOpacity={0.4} 
+                  />
+                  <stop 
+                    offset="95%" 
+                    stopColor={typeColors[tipo] || typeColors.otros} 
+                    stopOpacity={0.05} 
+                  />
+                </linearGradient>
+              ))}
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis
+              dataKey="date"
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={10}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={10}
+              width={50}
+              tickFormatter={(value) => {
+                if (value >= 1000000) return `$${(value/1000000).toFixed(1)}M`;
+                if (value >= 1000) return `$${(value/1000).toFixed(0)}K`;
+                return `$${value}`;
+              }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend content={<CustomLegend />} />
+            {operationTypes.map((tipo) => (
+              <Area
+                key={tipo}
+                type="monotone"
+                dataKey={tipo}
+                name={tipo}
+                stroke={typeColors[tipo] || typeColors.otros}
+                strokeWidth={2.5}
+                fill={`url(#color${tipo})`}
+                fillOpacity={1}
+              />
+            ))}
+          </AreaChart>
+        </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default GainsChart;

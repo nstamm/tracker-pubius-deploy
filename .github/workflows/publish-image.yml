@@ -1,0 +1,32 @@
+name: Publish container image
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Log in to GitHub Container Registry
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build image
+        run: |
+          docker build \
+            --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --tag "ghcr.io/${GITHUB_REPOSITORY}:latest" \
+            --tag "ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_SHA}" \
+            .
+      - name: Push image
+        run: |
+          docker push "ghcr.io/${GITHUB_REPOSITORY}:latest"
+          docker push "ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_SHA}"
