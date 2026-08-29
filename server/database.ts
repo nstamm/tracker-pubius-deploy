@@ -77,6 +77,11 @@ const SCHEMA = `
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS monthly_reports (
+    period TEXT PRIMARY KEY,
+    sent_at TEXT NOT NULL
+  );
 `;
 
 function toMinorUnits(value: number): number {
@@ -146,6 +151,17 @@ export class AppDatabase {
 
   setAuthPasswordHash(passwordHash: string): void {
     this.db.prepare("UPDATE app_settings SET value = ? WHERE key = 'auth_password_hash'").run(passwordHash);
+  }
+
+  listSentReportPeriods(): Set<string> {
+    const rows = this.db.prepare("SELECT period FROM monthly_reports").all() as unknown as Array<{ period: string }>;
+    return new Set(rows.map((row) => row.period));
+  }
+
+  markReportSent(period: string): void {
+    this.db
+      .prepare("INSERT OR REPLACE INTO monthly_reports (period, sent_at) VALUES (?, ?)")
+      .run(period, new Date().toISOString());
   }
 
   async backup(destination: string): Promise<void> {

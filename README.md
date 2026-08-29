@@ -58,6 +58,23 @@ The Compose labels configure the VPS Traefik instance to route HTTPS traffic to 
 
 No host port is published. Traefik reaches the container through Docker networking, and the database is never exposed over the network.
 
+## Monthly Email Report
+
+At 08:00 (America/Argentina/Buenos_Aires by default) on the 1st of each month the server emails a report of the previous calendar month's operations, including totals and a detail per operation. The report is sent to `REPORT_RECIPIENT`; the subject and sender come from `REPORT_FROM`. If the service was down on the 1st, the pending report is sent the next time the server starts. Each reported month is recorded in SQLite, so a month is never emailed twice.
+
+Set all of these to enable the report (leave them empty to disable):
+
+| Variable | Purpose |
+|---|---|
+| `SMTP_HOST` | SMTP server (Hostinger: `smtp.hostinger.com`) |
+| `SMTP_PORT` | Default `465` (implicit TLS) |
+| `SMTP_USER` | Mailbox address used to authenticate |
+| `SMTP_PASSWORD` | SMTP password for that mailbox |
+| `REPORT_RECIPIENT` | Where the report is sent |
+| `REPORT_FROM` | Optional sender address (defaults to `SMTP_USER`) |
+| `REPORT_TIMEZONE` | Optional IANA zone (default `America/Argentina/Buenos_Aires`) |
+| `REPORT_HOUR` | Optional hour of day on the 1st (default `8`) |
+
 ## Backups
 
 The server creates a consistent SQLite backup at startup and every `BACKUP_INTERVAL_HOURS`. Backups are written to the persistent `pubius_backups` Docker volume, and only the newest `BACKUP_RETENTION` files are kept.

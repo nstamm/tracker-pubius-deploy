@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "./app.js";
 import { hashPassword } from "./auth.js";
+import type { ReportMailer } from "./report.js";
 
 const apps: FastifyInstance[] = [];
 
@@ -135,6 +136,49 @@ describe("authentication", { timeout: 15_000 }, () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+});
+
+describe("monthly report scheduling", () => {
+  function appWithReport(now: () => Date, mailer: ReportMailer) {
+    return buildApp({
+      databasePath: ":memory:",
+      authEmail: "owner@example.com",
+      authPasswordHash: hashPassword("correct-password"),
+      cookieSecret: "test-secret-with-at-least-twenty-characters",
+      cookieSecure: false,
+      reportMailer: mailer,
+      reportNow: now,
+    });
+  }
+
+  it("sends the previous month when the report becomes due", async () => {
+    const received: Array<{ period: string; subject: string }> = [];
+    const app = await appWithReport(
+      () => new Date("2026-09-01T12:00:00Z"),
+      { send: async (input) => {
+        received.push({ period: input.period, subject: input.subject });
+      } },
+    );
+    apps.push(app);
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(received).toHaveLength(1);
+    expect(received[0].period).toBe("2026-08");
+  });
+
+  it("waits for the scheduled hour", async () => {
+    const received: Array<{ period: string }> = [];
+    const app = await appWithReport(
+      () => new Date("2026-09-01T10:55:00Z"),
+      { send: async (input) => {
+        received.push({ period: input.period });
+      } },
+    );
+    apps.push(app);
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(received).toHaveLength(0);
   });
 });
 

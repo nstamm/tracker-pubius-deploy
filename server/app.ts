@@ -7,6 +7,7 @@ import Fastify from "fastify";
 import { z } from "zod";
 import { hashPassword, verifyPassword } from "./auth.js";
 import { AppDatabase } from "./database.js";
+import { createSmtpMailer, runDueReports, type ReportMailer, type SmtpOptions } from "./report.js";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const SESSION_COOKIE = "pubius_session";
@@ -51,6 +52,11 @@ export interface AppOptions {
   backupDirectory?: string;
   backupIntervalHours?: number;
   backupRetention?: number;
+  smtp?: SmtpOptions;
+  reportMailer?: ReportMailer;
+  reportTimeZone?: string;
+  reportHour?: number;
+  reportNow?: () => Date;
   logger?: boolean;
 }
 
@@ -101,6 +107,36 @@ export async function buildApp(options: AppOptions) {
     }, intervalHours * 60 * 60 * 1_000);
     backupTimer.unref();
     app.addHook("onClose", async () => clearInterval(backupTimer));
+  }
+
+  if (options.smtp || options.reportMailer) {
+    const reportHour = options.reportHour ?? 8;
+    if (!Number.isInteger(reportHour) || reportHour < 0 || reportHour > 23) {
+      throw new Error("Report hour must be an integer between 0 and 23");
+    }
+    const timeZone = options.reportTimeZone ?? "America/Argentina/Buenos_Aires";
+    const mailer = options.reportMailer ?? createSmtpMailer(options.smtp!);
+    const recipient = options.smtp?.to ?? "";
+    const sendDueReport = async () => {
+      try {
+        const result = await runDueReports(database, mailer, recipient, {
+          now: options.reportNow ? options.reportNow() : undefined,
+          timeZone,
+          reportHour,
+        });
+        if (result) {
+          app.log.info({ period: result.period, count: result.count }, "Monthly report sent");
+        }
+      } catch (error) {
+        app.log.error(error, "Monthly report failed");
+      }
+    };
+    void sendDueReport();
+    const reportTimer = setInterval(() => {
+      void sendDueReport();
+    }, 60 * 60 * 1_000);
+    reportTimer.unref();
+    app.addHook("onClose", async () => clearInterval(reportTimer));
   }
 
   app.addHook("onRequest", async (request, reply) => {
