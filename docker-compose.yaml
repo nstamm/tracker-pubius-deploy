@@ -1,7 +1,6 @@
 services:
   pubius-tracker:
-    image: ghcr.io/nstamm/tracker-pubius:latest
-    pull_policy: always
+    build: .
     restart: unless-stopped
     init: true
     env_file:
