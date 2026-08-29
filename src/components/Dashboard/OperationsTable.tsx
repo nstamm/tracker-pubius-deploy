@@ -57,6 +57,9 @@ const getTypeBadgeColor = (tipo: string) => {
   if (lowerTipo.includes("binance")) return "bg-amber-500/20 text-amber-400 border-amber-500/30";
   if (lowerTipo.includes("slash")) return "bg-rose-900/30 text-rose-300 border-rose-800/30";
   if (lowerTipo.includes("mercury")) return "bg-white text-black border-white/30";
+  if (lowerTipo.includes("venmo")) return "bg-sky-500/20 text-sky-400 border-sky-500/30";
+  if (lowerTipo.includes("cash app")) return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+  if (lowerTipo.includes("chime")) return "bg-lime-500/20 text-lime-400 border-lime-500/30";
   if (lowerTipo.includes("comisión") || lowerTipo.includes("comision")) return "bg-green-500/20 text-green-400 border-green-500/30";
   return "bg-muted text-muted-foreground border-border";
 };
@@ -149,15 +152,15 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
   }, [sortedOperations]);
 
   return (
-    <div className="w-full overflow-x-auto">
-      <Table>
+    <div className="w-full overflow-x-hidden">
+      <Table className="table-fixed text-xs [&_th]:h-10 [&_th]:px-2 [&_th]:py-2 [&_td]:px-2 [&_td]:py-2">
         <TableHeader>
           <TableRow className="bg-secondary/50 hover:bg-secondary/70">
             <SortableTableHead
               field="fecha_operacion"
               currentSort={sortConfig}
               onSort={handleSort}
-              className="hidden md:table-cell"
+              className="hidden xl:table-cell"
             >
               Fecha
             </SortableTableHead>
@@ -165,6 +168,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
               field="tipo_operacion"
               currentSort={sortConfig}
               onSort={handleSort}
+              className="w-[28%]"
             >
               Tipo
             </SortableTableHead>
@@ -172,7 +176,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
               field="monto_total"
               currentSort={sortConfig}
               onSort={handleSort}
-              className="text-right"
+              className="w-[22%] text-right"
             >
               Monto Total
             </SortableTableHead>
@@ -180,7 +184,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
               field="porcentaje_ganancia"
               currentSort={sortConfig}
               onSort={handleSort}
-              className="text-right"
+              className="hidden w-[14%] text-right sm:table-cell"
             >
               % Ganancia
             </SortableTableHead>
@@ -188,11 +192,11 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
               field="ganancia"
               currentSort={sortConfig}
               onSort={handleSort}
-              className="text-right"
+              className="w-[22%] text-right"
             >
               Ganancia
             </SortableTableHead>
-            <TableHead className="text-center">Acciones</TableHead>
+            <TableHead className="w-10 text-center">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -203,8 +207,8 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
             
             return (
               <TableRow key={operation.id} className="group hover:bg-secondary/30">
-                {/* Fecha - Hidden on mobile */}
-                <TableCell className="font-medium hidden md:table-cell">
+                {/* Fecha - Visible when the table has enough room */}
+                <TableCell className="hidden font-medium xl:table-cell">
                   <div className="flex items-center gap-2">
                     {isEditingFecha ? (
                       <>
@@ -250,13 +254,13 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
                 </TableCell>
 
                 {/* Tipo - Visible on all screens */}
-                <TableCell>
+                <TableCell className="w-[28%]">
                   <Select
                     value={operation.tipo_operacion}
                     onValueChange={(value) => saveField(operation.id, "tipo_operacion", value, operation)}
                   >
-                    <SelectTrigger className="h-8 w-[100px] md:w-[140px] border-0 bg-transparent hover:bg-secondary/50">
-                      <Badge variant="outline" className={getTypeBadgeColor(operation.tipo_operacion)}>
+                    <SelectTrigger className="h-8 w-full min-w-0 border-0 bg-transparent px-1 hover:bg-secondary/50">
+                      <Badge variant="outline" className={`max-w-full truncate ${getTypeBadgeColor(operation.tipo_operacion)}`}>
                         {operation.tipo_operacion}
                       </Badge>
                     </SelectTrigger>
@@ -267,6 +271,9 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
                       <SelectItem value="Binance">Binance</SelectItem>
                       <SelectItem value="Slash">Slash</SelectItem>
                       <SelectItem value="Mercury">Mercury</SelectItem>
+                      <SelectItem value="Venmo">Venmo</SelectItem>
+                      <SelectItem value="Cash App">Cash App</SelectItem>
+                      <SelectItem value="Chime">Chime</SelectItem>
                       <SelectItem value="Comisión">Comisión</SelectItem>
                       <SelectItem value="A definir">A definir</SelectItem>
                     </SelectContent>
@@ -306,7 +313,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
                       </>
                     ) : (
                       <>
-                        <span className="font-mono text-xs md:text-sm">
+                        <span className="block truncate font-mono text-xs md:text-sm">
                           ${operation.monto_total?.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                         </span>
                         <Button
@@ -322,8 +329,8 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
                   </div>
                 </TableCell>
 
-                {/* Porcentaje Ganancia - Visible on all screens */}
-                <TableCell className="text-right">
+                {/* Porcentaje Ganancia - Hidden on narrow screens */}
+                <TableCell className="hidden text-right sm:table-cell">
                   <div className="flex items-center justify-end gap-2">
                     {isEditingPorcentaje ? (
                       <>
@@ -373,12 +380,12 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
 
                 {/* Ganancia - Visible on all screens (No editable) */}
                 <TableCell className="text-right font-bold text-success text-xs md:text-sm">
-                  ${operation.ganancia?.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                  <span className="block truncate">${operation.ganancia?.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
                 </TableCell>
 
                 {/* Acciones */}
                 <TableCell className="text-center">
-                  <div className="flex justify-center gap-1 md:gap-2">
+                  <div className="flex justify-center gap-1">
                     {/* Eye button - Only visible on mobile */}
                     <Sheet>
                       <SheetTrigger asChild>
@@ -431,6 +438,9 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
                                   <SelectItem value="Binance">Binance</SelectItem>
                                   <SelectItem value="Slash">Slash</SelectItem>
                                   <SelectItem value="Mercury">Mercury</SelectItem>
+                                  <SelectItem value="Venmo">Venmo</SelectItem>
+                                  <SelectItem value="Cash App">Cash App</SelectItem>
+                                  <SelectItem value="Chime">Chime</SelectItem>
                                   <SelectItem value="Comisión">Comisión</SelectItem>
                                   <SelectItem value="A definir">A definir</SelectItem>
                                 </SelectContent>
@@ -537,12 +547,12 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
         </TableBody>
         <TableFooter>
           <TableRow className="bg-secondary/50 hover:bg-secondary/50">
-            <TableCell colSpan={2} className="hidden md:table-cell text-right font-semibold">Totales:</TableCell>
-            <TableCell className="md:hidden font-semibold">Total</TableCell>
+            <TableCell colSpan={2} className="hidden xl:table-cell text-right font-semibold">Totales:</TableCell>
+            <TableCell className="xl:hidden font-semibold">Total</TableCell>
             <TableCell className="text-right font-bold text-xs md:text-sm">
               ${totals.monto_total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
             </TableCell>
-            <TableCell className="text-right text-xs">
+            <TableCell className="hidden text-right text-xs sm:table-cell">
               <span className="hidden md:inline">Promedio: </span>{totals.porcentaje_promedio.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
             </TableCell>
             <TableCell className="text-right font-bold text-success text-xs md:text-sm">

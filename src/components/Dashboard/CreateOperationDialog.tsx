@@ -107,6 +107,9 @@ const CreateOperationDialog = ({ onSuccess }: CreateOperationDialogProps) => {
                   <SelectItem value="Binance">Binance</SelectItem>
                   <SelectItem value="Slash">Slash</SelectItem>
                   <SelectItem value="Mercury">Mercury</SelectItem>
+                  <SelectItem value="Venmo">Venmo</SelectItem>
+                  <SelectItem value="Cash App">Cash App</SelectItem>
+                  <SelectItem value="Chime">Chime</SelectItem>
                   <SelectItem value="Comisión">Comisión</SelectItem>
                   <SelectItem value="A definir">A definir</SelectItem>
                 </SelectContent>

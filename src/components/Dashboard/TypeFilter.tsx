@@ -1,6 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export type OperationType = "all" | "Zelle" | "Paypal" | "Skrill" | "Binance" | "Slash" | "Mercury" | "A definir" | "Comisión";
+export type OperationType = "all" | "Zelle" | "Paypal" | "Skrill" | "Binance" | "Slash" | "Mercury" | "Venmo" | "Cash App" | "Chime" | "A definir" | "Comisión";
 
 interface TypeFilterProps {
   value: OperationType;
@@ -21,6 +21,9 @@ const TypeFilter = ({ value, onChange }: TypeFilterProps) => {
         <SelectItem value="Binance">Binance</SelectItem>
         <SelectItem value="Slash">Slash</SelectItem>
         <SelectItem value="Mercury">Mercury</SelectItem>
+        <SelectItem value="Venmo">Venmo</SelectItem>
+        <SelectItem value="Cash App">Cash App</SelectItem>
+        <SelectItem value="Chime">Chime</SelectItem>
         <SelectItem value="Comisión">Comisión</SelectItem>
         <SelectItem value="A definir">A definir</SelectItem>
       </SelectContent>

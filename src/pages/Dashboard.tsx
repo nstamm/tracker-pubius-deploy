@@ -197,7 +197,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-2">
+        <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,3fr)_minmax(240px,1fr)]">
           <Card className="flex min-h-[520px] flex-col overflow-hidden border-border/80 bg-card/90 shadow-xl shadow-black/5 lg:min-h-0">
             <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b border-border/70 px-4 py-3">
               <div>
@@ -231,7 +231,7 @@ const Dashboard = () => {
           </Card>
 
           <section className="grid min-h-[520px] gap-4 lg:min-h-0 lg:grid-rows-[auto_minmax(0,1fr)]">
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-3 gap-2.5 lg:grid-cols-1">
               <MetricCard
                 title="Ganancia total"
                 value={`$${totalGains.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`}

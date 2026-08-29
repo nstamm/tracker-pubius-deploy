@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { TrendingUp } from "lucide-react";
+import { Zap } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -42,11 +42,11 @@ const Auth = () => {
         <CardHeader className="space-y-3 text-center">
           <div className="flex justify-center mb-2">
             <div className="p-3 bg-primary/10 rounded-xl">
-              <TrendingUp className="h-8 w-8 text-primary" />
+              <Zap className="h-8 w-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-gradient">
-            Dashboard Financiero
+          <CardTitle className="text-2xl font-bold tracking-[0.2em] text-gradient">
+            PUBIUS
           </CardTitle>
           <CardDescription>
             Inicia sesión en tu cuenta

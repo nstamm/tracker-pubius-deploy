@@ -27,7 +27,7 @@ const App = () => (
             path="/*"
             element={
               <ProtectedRoute>
-                <SidebarProvider>
+                <SidebarProvider defaultOpen={false}>
                   <div className="flex min-h-screen w-full">
                     <div className="hidden md:flex">
                       <AppSidebar />
