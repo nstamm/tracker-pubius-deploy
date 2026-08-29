@@ -181,78 +181,85 @@ const Dashboard = () => {
   }, []).reverse();
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="w-[calc(100vw-24px)] min-[415px]:w-[390px] md:w-full md:max-w-screen-xl mx-auto px-3 md:px-4 py-4 md:py-8 space-y-4 md:space-y-8 overflow-x-hidden">
-        {/* Filters and Actions */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
-          <div className="grid grid-cols-2 md:flex gap-2 md:gap-4">
-            <PeriodFilter value={period} onChange={setPeriod} />
-            <TypeFilter value={typeFilter} onChange={setTypeFilter} />
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.12),transparent_32%),hsl(var(--background))] lg:h-dvh lg:overflow-hidden">
+      <main className="mx-auto w-[calc(100vw-24px)] min-[415px]:w-[390px] space-y-4 overflow-x-hidden px-3 py-4 md:w-full md:max-w-none md:px-4 lg:flex lg:h-dvh lg:flex-col lg:gap-3 lg:space-y-0 lg:px-5 lg:py-4">
+        <div className="flex shrink-0 flex-col justify-between gap-3 border-b border-border/70 pb-3 md:flex-row md:items-center">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Pubius tracker</p>
+            <h1 className="text-lg font-semibold tracking-tight">Centro de operaciones</h1>
           </div>
-          <CreateOperationDialog onSuccess={fetchOperations} />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="grid grid-cols-2 gap-2 sm:flex">
+              <PeriodFilter value={period} onChange={setPeriod} />
+              <TypeFilter value={typeFilter} onChange={setTypeFilter} />
+            </div>
+            <CreateOperationDialog onSuccess={fetchOperations} />
+          </div>
         </div>
 
-        {/* Metrics */}
-        <div className="grid gap-2 md:gap-4 grid-cols-3">
-          <MetricCard
-            title="Ganancia Total"
-            value={`$${totalGains.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`}
-            previousValue={period !== "all" ? `$${totalGainsPrev.toLocaleString('es-ES', { minimumFractionDigits: 2 })}` : undefined}
-            percentageChange={period !== "all" ? gainsChange : undefined}
-            secondaryValue={`$${totalAmount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`}
-            secondaryLabel="//"
-            icon={DollarSign}
-          />
-          <MetricCard
-            title="Número de Operaciones"
-            value={filteredOperations.length.toString()}
-            previousValue={period !== "all" ? filteredPreviousOperations.length.toString() : undefined}
-            percentageChange={period !== "all" ? operationsChange : undefined}
-            icon={Activity}
-          />
-          <MetricCard
-            title="Ganancia Promedio"
-            value={`${avgPercentage.toFixed(2)}%`}
-            previousValue={period !== "all" ? `${avgPercentagePrev.toFixed(2)}%` : undefined}
-            percentageChange={period !== "all" ? avgPercentageChange : undefined}
-            icon={BarChart3}
-          />
-        </div>
-
-        {/* Chart */}
-        <GainsChart data={chartData} />
-
-        {/* Operations Table */}
-        <Card>
-          <CardHeader className="p-4 md:p-6">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base md:text-lg">Operaciones Recientes</CardTitle>
+        <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-2">
+          <Card className="flex min-h-[520px] flex-col overflow-hidden border-border/80 bg-card/90 shadow-xl shadow-black/5 lg:min-h-0">
+            <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b border-border/70 px-4 py-3">
+              <div>
+                <CardTitle className="text-base">Operaciones</CardTitle>
+                <p className="mt-0.5 text-xs text-muted-foreground">{filteredOperations.length} en el período seleccionado</p>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={fetchOperations}
                 disabled={loading}
-                className="gap-2"
+                className="h-8 gap-2 border-border/80 bg-background/50 px-2.5"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden md:inline">Actualizar</span>
+                <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">Actualizar</span>
               </Button>
+            </CardHeader>
+            <CardContent className="min-h-0 flex-1 overflow-y-auto p-0">
+              {loading ? (
+                <div className="flex h-full min-h-40 items-center justify-center">
+                  <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+                </div>
+              ) : filteredOperations.length === 0 ? (
+                <p className="flex h-full min-h-40 items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                  No hay operaciones en este período
+                </p>
+              ) : (
+                <OperationsTable operations={filteredOperations} onUpdate={fetchOperations} onDelete={fetchOperations} />
+              )}
+            </CardContent>
+          </Card>
+
+          <section className="grid min-h-[520px] gap-4 lg:min-h-0 lg:grid-rows-[auto_minmax(0,1fr)]">
+            <div className="grid grid-cols-3 gap-2.5">
+              <MetricCard
+                title="Ganancia total"
+                value={`$${totalGains.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`}
+                previousValue={period !== "all" ? `$${totalGainsPrev.toLocaleString('es-ES', { minimumFractionDigits: 2 })}` : undefined}
+                percentageChange={period !== "all" ? gainsChange : undefined}
+                secondaryValue={`$${totalAmount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`}
+                secondaryLabel="Volumen"
+                icon={DollarSign}
+              />
+              <MetricCard
+                title="Operaciones"
+                value={filteredOperations.length.toString()}
+                previousValue={period !== "all" ? filteredPreviousOperations.length.toString() : undefined}
+                percentageChange={period !== "all" ? operationsChange : undefined}
+                icon={Activity}
+              />
+              <MetricCard
+                title="Margen medio"
+                value={`${avgPercentage.toFixed(2)}%`}
+                previousValue={period !== "all" ? `${avgPercentagePrev.toFixed(2)}%` : undefined}
+                percentageChange={period !== "all" ? avgPercentageChange : undefined}
+                icon={BarChart3}
+              />
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-              </div>
-            ) : filteredOperations.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                No hay operaciones en este período
-              </p>
-            ) : (
-              <OperationsTable operations={filteredOperations} onUpdate={fetchOperations} onDelete={fetchOperations} />
-            )}
-          </CardContent>
-        </Card>
+
+            <GainsChart data={chartData} compact />
+          </section>
+        </div>
 
         <VoiceAssistant onSuccess={fetchOperations} />
       </main>

@@ -10,6 +10,7 @@ interface ChartData {
 
 interface GainsChartProps {
   data: ChartData[];
+  compact?: boolean;
 }
 
 const typeColors: { [key: string]: string } = {
@@ -85,7 +86,7 @@ const CustomLegend = ({ payload }: { payload?: LegendEntry[] }) => {
   );
 };
 
-const GainsChart = ({ data }: GainsChartProps) => {
+const GainsChart = ({ data, compact = false }: GainsChartProps) => {
   // Get all unique operation types from the data
   const operationTypes = Array.from(
     new Set(
@@ -98,12 +99,12 @@ const GainsChart = ({ data }: GainsChartProps) => {
   );
 
   return (
-    <Card className="col-span-full overflow-hidden">
-      <CardHeader className="p-4 md:p-6">
-        <CardTitle className="text-base md:text-lg">Ganancias Diarias por Tipo de Operación</CardTitle>
+    <Card className={compact ? "flex h-full min-h-0 flex-col overflow-hidden border-border/80 bg-card/90 shadow-xl shadow-black/5" : "col-span-full overflow-hidden"}>
+      <CardHeader className={compact ? "shrink-0 border-b border-border/70 px-4 py-3" : "p-4 md:p-6"}>
+        <CardTitle className="text-base md:text-lg">Ganancias por operación</CardTitle>
       </CardHeader>
-      <CardContent className="p-2 md:p-6 w-full min-w-0">
-        <div className="h-[200px] md:h-[400px] w-full min-w-0 max-w-full">
+      <CardContent className={compact ? "min-h-0 flex-1 p-3" : "w-full min-w-0 p-2 md:p-6"}>
+        <div className={compact ? "h-[260px] w-full min-w-0 max-w-full lg:h-full" : "h-[200px] w-full min-w-0 max-w-full md:h-[400px]"}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart 
               data={data}

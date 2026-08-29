@@ -25,33 +25,33 @@ const MetricCard = ({
   const isPositive = percentageChange !== undefined && percentageChange >= 0;
   
   return (
-    <Card className="card-hover min-w-0">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
-        <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+    <Card className="card-hover min-w-0 border-border/80 bg-card/90 shadow-lg shadow-black/5">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2.5 pb-1.5 md:p-3 md:pb-1.5">
+        <CardTitle className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground md:text-[11px]">
           {title}
         </CardTitle>
-        <div className="p-1.5 md:p-2 bg-primary/10 rounded-lg">
-          <Icon className="h-3 w-3 md:h-4 md:w-4 text-primary" />
+        <div className="rounded-md bg-primary/10 p-1.5">
+          <Icon className="h-3 w-3 text-primary" />
         </div>
       </CardHeader>
-      <CardContent className="space-y-1 p-3 pt-0 md:p-6 md:pt-0">
-        <div className="text-lg md:text-xl font-bold">{value}</div>
+      <CardContent className="space-y-1 p-2.5 pt-0 md:p-3 md:pt-0">
+        <div className="truncate text-base font-bold tracking-tight md:text-lg">{value}</div>
         
         {secondaryValue && (
-          <p className="text-xs text-muted-foreground/50">
+          <p className="truncate text-[10px] text-muted-foreground/60">
             {secondaryLabel}: {secondaryValue}
           </p>
         )}
         
         {extraInfo && (
-          <p className="text-xs text-muted-foreground/70">
+          <p className="text-[10px] text-muted-foreground/70">
             {extraInfo}
           </p>
         )}
         
         {previousValue && percentageChange !== undefined && (
-          <div className="flex items-center gap-1.5 text-xs mt-1">
-            <span className="text-muted-foreground/60">
+          <div className="mt-1 flex items-center gap-1 text-[10px]">
+            <span className="hidden text-muted-foreground/60 xl:inline">
               Ant: {previousValue}
             </span>
             <div className={`flex items-center gap-0.5 font-medium ${
