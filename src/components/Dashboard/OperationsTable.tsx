@@ -152,15 +152,14 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
   }, [sortedOperations]);
 
   return (
-    <div className="w-full overflow-x-hidden">
-      <Table className="table-fixed text-xs [&_th]:h-10 [&_th]:px-2 [&_th]:py-2 [&_td]:px-2 [&_td]:py-2">
+      <Table containerClassName="overflow-hidden" className="table-fixed text-xs [&_th]:h-9 [&_th]:px-1.5 [&_th]:py-1 [&_td]:px-1.5 [&_td]:py-1">
         <TableHeader>
           <TableRow className="bg-secondary/50 hover:bg-secondary/70">
             <SortableTableHead
               field="fecha_operacion"
               currentSort={sortConfig}
               onSort={handleSort}
-              className="hidden xl:table-cell"
+              className="hidden w-[14%] xl:table-cell"
             >
               Fecha
             </SortableTableHead>
@@ -168,7 +167,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
               field="tipo_operacion"
               currentSort={sortConfig}
               onSort={handleSort}
-              className="w-[28%]"
+              className="w-[32%] sm:w-[26%] xl:w-[24%]"
             >
               Tipo
             </SortableTableHead>
@@ -176,7 +175,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
               field="monto_total"
               currentSort={sortConfig}
               onSort={handleSort}
-              className="w-[22%] text-right"
+              className="w-[25%] text-right sm:w-[20%] xl:w-[18%]"
             >
               Monto Total
             </SortableTableHead>
@@ -184,7 +183,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
               field="porcentaje_ganancia"
               currentSort={sortConfig}
               onSort={handleSort}
-              className="hidden w-[14%] text-right sm:table-cell"
+              className="hidden text-right sm:table-cell sm:w-[14%] xl:w-[13%]"
             >
               % Ganancia
             </SortableTableHead>
@@ -192,11 +191,11 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
               field="ganancia"
               currentSort={sortConfig}
               onSort={handleSort}
-              className="w-[22%] text-right"
+              className="w-[25%] text-right sm:w-[20%] xl:w-[20%]"
             >
               Ganancia
             </SortableTableHead>
-            <TableHead className="w-10 text-center">Acciones</TableHead>
+            <TableHead className="w-[10%] text-center sm:w-[8%]">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -254,7 +253,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
                 </TableCell>
 
                 {/* Tipo - Visible on all screens */}
-                <TableCell className="w-[28%]">
+                <TableCell className="w-[32%] sm:w-[26%] xl:w-[24%]">
                   <Select
                     value={operation.tipo_operacion}
                     onValueChange={(value) => saveField(operation.id, "tipo_operacion", value, operation)}
@@ -320,7 +319,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
                           variant="ghost"
                           size="icon"
                           onClick={() => startEdit(operation.id, "monto_total", operation.monto_total)}
-                          className="text-muted-foreground hover:text-foreground h-6 w-6 opacity-0 group-hover:opacity-100 hidden md:inline-flex"
+                          className="text-muted-foreground hover:text-foreground hidden h-6 w-6 opacity-0 group-hover:opacity-100 xl:inline-flex"
                         >
                           <Pencil className="h-3 w-3" />
                         </Button>
@@ -368,7 +367,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
                             variant="ghost"
                             size="icon"
                             onClick={() => startEdit(operation.id, "porcentaje_ganancia", operation.porcentaje_ganancia)}
-                            className="text-muted-foreground hover:text-foreground h-6 w-6 opacity-0 group-hover:opacity-100 hidden md:inline-flex"
+                          className="text-muted-foreground hover:text-foreground hidden h-6 w-6 opacity-0 group-hover:opacity-100 xl:inline-flex"
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
@@ -562,7 +561,6 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
           </TableRow>
         </TableFooter>
       </Table>
-    </div>
   );
 };
 

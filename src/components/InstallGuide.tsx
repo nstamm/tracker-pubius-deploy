@@ -1,14 +1,27 @@
 import { Download, PlusSquare, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { SidebarMenuButton } from "@/components/ui/sidebar";
 
-const InstallGuide = () => (
+interface InstallGuideProps {
+  sidebar?: boolean;
+  collapsed?: boolean;
+}
+
+const InstallGuide = ({ sidebar = false, collapsed = false }: InstallGuideProps) => (
   <Dialog>
     <DialogTrigger asChild>
-      <Button variant="outline" className="h-9 gap-2 border-border/80 bg-background/50">
-        <Download className="h-4 w-4" />
-        Instalar app
-      </Button>
+      {sidebar ? (
+        <SidebarMenuButton tooltip="Instalar app">
+          <Download className="h-4 w-4" />
+          {!collapsed && <span>Instalar app</span>}
+        </SidebarMenuButton>
+      ) : (
+        <Button variant="outline" className="h-9 gap-2 border-border/80 bg-background/50">
+          <Download className="h-4 w-4" />
+          Instalar app
+        </Button>
+      )}
     </DialogTrigger>
     <DialogContent className="max-w-md">
       <DialogHeader>

@@ -5,7 +5,6 @@ import PeriodFilter, { Period } from "@/components/Dashboard/PeriodFilter";
 import TypeFilter, { OperationType } from "@/components/Dashboard/TypeFilter";
 import GainsChart from "@/components/Dashboard/GainsChart";
 import CreateOperationDialog from "@/components/Dashboard/CreateOperationDialog";
-import InstallGuide from "@/components/InstallGuide";
 import VoiceAssistant from "@/components/VoiceAssistant";
 import OperationsTable from "@/components/Dashboard/OperationsTable";
 import { DollarSign, TrendingUp, Activity, BarChart3, RefreshCw } from "lucide-react";
@@ -195,11 +194,10 @@ const Dashboard = () => {
               <TypeFilter value={typeFilter} onChange={setTypeFilter} />
             </div>
             <CreateOperationDialog onSuccess={fetchOperations} />
-            <InstallGuide />
           </div>
         </div>
 
-        <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,3fr)_minmax(240px,1fr)]">
+        <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
           <Card className="flex min-h-[520px] flex-col overflow-hidden border-border/80 bg-card/90 shadow-xl shadow-black/5 lg:min-h-0">
             <CardHeader className="flex shrink-0 flex-row items-center justify-between space-y-0 border-b border-border/70 px-4 py-3">
               <div>
