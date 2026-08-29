@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "./app.js";
 import { hashPassword } from "./auth.js";
@@ -81,6 +84,57 @@ describe("authentication", { timeout: 15_000 }, () => {
       headers: { cookie: (Array.isArray(clearedCookie) ? clearedCookie[0] : clearedCookie).split(";", 1)[0] },
     });
     expect(session.statusCode).toBe(401);
+  });
+
+  it("persists a changed password across app restarts", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "pubius-password-"));
+    const databasePath = join(directory, "pubius.sqlite");
+    const first = await buildApp({
+      databasePath,
+      authEmail: "owner@example.com",
+      authPasswordHash: hashPassword("correct-password"),
+      cookieSecret: "test-secret-with-at-least-twenty-characters",
+      cookieSecure: false,
+    });
+
+    try {
+      const cookie = await login(first);
+      const change = await first.inject({
+        method: "POST",
+        url: "/api/auth/password",
+        headers: { cookie },
+        payload: { currentPassword: "correct-password", newPassword: "new-correct-password" },
+      });
+      expect(change.statusCode).toBe(204);
+      await first.close();
+
+      const second = await buildApp({
+        databasePath,
+        authEmail: "owner@example.com",
+        authPasswordHash: hashPassword("deployment-password"),
+        cookieSecret: "test-secret-with-at-least-twenty-characters",
+        cookieSecure: false,
+      });
+      try {
+        const loginWithChangedPassword = await second.inject({
+          method: "POST",
+          url: "/api/auth/login",
+          payload: { email: "owner@example.com", password: "new-correct-password" },
+        });
+        expect(loginWithChangedPassword.statusCode).toBe(200);
+
+        const loginWithDeploymentPassword = await second.inject({
+          method: "POST",
+          url: "/api/auth/login",
+          payload: { email: "owner@example.com", password: "deployment-password" },
+        });
+        expect(loginWithDeploymentPassword.statusCode).toBe(401);
+      } finally {
+        await second.close();
+      }
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });
 

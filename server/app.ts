@@ -5,7 +5,7 @@ import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
 import { z } from "zod";
-import { verifyPassword } from "./auth.js";
+import { hashPassword, verifyPassword } from "./auth.js";
 import { AppDatabase } from "./database.js";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -70,6 +70,7 @@ export async function buildApp(options: AppOptions) {
 
   const app = Fastify({ logger: options.logger ?? false, trustProxy: true });
   const database = new AppDatabase(options.databasePath);
+  let authPasswordHash = database.getAuthPasswordHash(options.authPasswordHash);
   const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 
   await app.register(cookie, { secret: options.cookieSecret });
@@ -141,7 +142,7 @@ export async function buildApp(options: AppOptions) {
     if (!credentials) return;
 
     const emailMatches = credentials.email.trim().toLowerCase() === options.authEmail.toLowerCase();
-    const passwordMatches = verifyPassword(credentials.password, options.authPasswordHash);
+    const passwordMatches = verifyPassword(credentials.password, authPasswordHash);
     if (!emailMatches || !passwordMatches) {
       const current = loginAttempts.get(request.ip);
       loginAttempts.set(request.ip, {
@@ -164,6 +165,23 @@ export async function buildApp(options: AppOptions) {
   });
 
   app.get("/api/auth/session", async () => ({ user: { email: options.authEmail } }));
+
+  app.post("/api/auth/password", async (request, reply) => {
+    const input = parseBody(
+      z.object({ currentPassword: z.string().min(1).max(500), newPassword: z.string().min(12).max(500) }),
+      request.body,
+      reply,
+    );
+    if (!input) return;
+    if (!verifyPassword(input.currentPassword, authPasswordHash)) {
+      return reply.code(401).send({ error: "La contraseña actual es incorrecta" });
+    }
+
+    authPasswordHash = hashPassword(input.newPassword);
+    database.setAuthPasswordHash(authPasswordHash);
+    loginAttempts.clear();
+    return reply.code(204).send();
+  });
 
   app.post("/api/auth/logout", async (_request, reply) => {
     reply.clearCookie(SESSION_COOKIE, {

@@ -72,6 +72,11 @@ const SCHEMA = `
   );
 
   CREATE INDEX IF NOT EXISTS expenses_fecha_idx ON expenses(fecha DESC);
+
+  CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `;
 
 function toMinorUnits(value: number): number {
@@ -132,6 +137,15 @@ export class AppDatabase {
 
   isHealthy(): boolean {
     return this.db.prepare("SELECT 1").get() !== undefined;
+  }
+
+  getAuthPasswordHash(fallbackHash: string): string {
+    this.db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('auth_password_hash', ?)").run(fallbackHash);
+    return (this.db.prepare("SELECT value FROM app_settings WHERE key = 'auth_password_hash'").get() as { value: string }).value;
+  }
+
+  setAuthPasswordHash(passwordHash: string): void {
+    this.db.prepare("UPDATE app_settings SET value = ? WHERE key = 'auth_password_hash'").run(passwordHash);
   }
 
   async backup(destination: string): Promise<void> {

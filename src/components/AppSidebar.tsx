@@ -3,6 +3,7 @@ import { DollarSign, ArrowLeftRight, Wallet, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { api, getErrorMessage } from "@/lib/api";
 import InstallGuide from "@/components/InstallGuide";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -90,6 +91,9 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <InstallGuide sidebar collapsed={isCollapsed} />
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <ChangePasswordDialog collapsed={isCollapsed} />
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Cerrar Sesión" onClick={handleLogout} disabled={isLoggingOut}>

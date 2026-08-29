@@ -61,6 +61,10 @@ export const api = {
     }),
     session: () => request<{ user: { email: string } }>("/api/auth/session"),
     logout: () => request<void>("/api/auth/logout", { method: "POST" }),
+    changePassword: (currentPassword: string, newPassword: string) => request<void>("/api/auth/password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
   },
   operations: {
     list: (filters: { from?: string; to?: string } = {}) => {
