@@ -313,7 +313,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
                     ) : (
                       <>
                         <span className="block truncate font-mono text-xs md:text-sm">
-                          ${operation.monto_total?.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                          ${operation.monto_total?.toLocaleString('es-ES', { maximumFractionDigits: 0 })}
                         </span>
                         <Button
                           variant="ghost"
@@ -549,7 +549,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
             <TableCell colSpan={2} className="hidden xl:table-cell text-right font-semibold">Totales:</TableCell>
             <TableCell className="xl:hidden font-semibold">Total</TableCell>
             <TableCell className="text-right font-bold text-xs md:text-sm">
-              ${totals.monto_total.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+              ${totals.monto_total.toLocaleString('es-ES', { maximumFractionDigits: 0 })}
             </TableCell>
             <TableCell className="hidden text-right text-xs sm:table-cell">
               <span className="hidden md:inline">Promedio: </span>{totals.porcentaje_promedio.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%

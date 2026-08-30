@@ -36,10 +36,25 @@ const initialFormData = () => ({
   tipo_operacion: "",
 });
 
+const formatAmount = (value: string): string => {
+  const cleaned = value.replace(/[^\d,]/g, "");
+  const [whole = "", ...decimalParts] = cleaned.split(",");
+  const digits = whole.replace(/^0+(?=\d)/, "");
+  const grouped = (digits || (cleaned ? "0" : "")).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const decimals = decimalParts.join("").slice(0, 2);
+  return cleaned.includes(",") ? `${grouped},${decimals}` : grouped;
+};
+
+const amountToNumber = (value: string): number => Number(value.replace(/\./g, "").replace(",", "."));
+
 const CreateOperationDialog = ({ onSuccess }: CreateOperationDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
+  const amount = amountToNumber(formData.monto_total);
+  const percentage = formData.tipo_operacion === "Comisión" ? 100 : Number(formData.porcentaje_ganancia);
+  const estimatedGain = amount * (percentage / 100);
+  const hasEstimatedGain = Number.isFinite(amount) && Number.isFinite(percentage) && formData.monto_total !== "" && formData.porcentaje_ganancia !== "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,17 +62,20 @@ const CreateOperationDialog = ({ onSuccess }: CreateOperationDialogProps) => {
       toast.error("Elegí el tipo de operación");
       return;
     }
+    if (!Number.isFinite(amount) || amount < 0 || !Number.isFinite(percentage) || percentage < 0) {
+      toast.error("Completá monto y ganancia con valores válidos");
+      return;
+    }
     setLoading(true);
 
     try {
-      const porcentaje = formData.tipo_operacion === "Comisión" ? 100 : parseFloat(formData.porcentaje_ganancia);
       await api.operations.create({
         fecha_operacion: formData.fecha_operacion,
         id_operacion: formData.id_operacion,
         cuenta_emisora: formData.cuenta_emisora,
         cuenta_receptora: formData.cuenta_receptora,
-        monto_total: parseFloat(formData.monto_total),
-        porcentaje_ganancia: porcentaje,
+        monto_total: amount,
+        porcentaje_ganancia: percentage,
         tipo_operacion: formData.tipo_operacion,
       });
 
@@ -85,37 +103,54 @@ const CreateOperationDialog = ({ onSuccess }: CreateOperationDialogProps) => {
         overlayClassName="bg-background/65 backdrop-blur-md"
         className="flex h-dvh w-full flex-col gap-0 overflow-hidden border-l border-border/80 bg-card/95 p-0 shadow-[-20px_0_70px_rgba(0,0,0,0.45)] sm:max-w-[540px]"
       >
-        <SheetHeader className="border-b border-border/70 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.18),transparent_45%)] px-5 py-5 pr-14 text-left sm:px-6">
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 text-primary shadow-lg shadow-primary/10">
-            <Sparkles className="h-5 w-5" />
+        <SheetHeader className="border-b border-border/70 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.18),transparent_45%)] px-4 py-3 pr-12 text-left sm:px-5">
+          <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg border border-primary/25 bg-primary/10 text-primary shadow-lg shadow-primary/10">
+            <Sparkles className="h-4 w-4" />
           </div>
-          <SheetTitle className="text-xl">Nueva operación</SheetTitle>
-          <SheetDescription>Registrá el movimiento en segundos.</SheetDescription>
+          <SheetTitle className="text-lg">Nueva operación</SheetTitle>
+          <SheetDescription className="text-xs">Monto, tipo y ganancia primero.</SheetDescription>
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="monto" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Monto total</Label>
-                <span className="text-xs text-muted-foreground">USD</span>
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 sm:px-5">
+            <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)] gap-2.5">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="monto" className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Monto total</Label>
+                  <span className="text-[10px] text-muted-foreground">USD</span>
+                </div>
+                <Input
+                  id="monto"
+                  type="text"
+                  inputMode="decimal"
+                  value={formData.monto_total}
+                  onChange={(e) => setFormData({ ...formData, monto_total: formatAmount(e.target.value) })}
+                  required
+                  autoFocus
+                  placeholder="0"
+                  className="h-12 border-primary/25 bg-primary/5 px-3 text-2xl font-semibold tracking-tight shadow-inner shadow-primary/5 focus-visible:border-primary/60"
+                />
               </div>
-              <Input
-                id="monto"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.monto_total}
-                onChange={(e) => setFormData({ ...formData, monto_total: e.target.value })}
-                required
-                autoFocus
-                placeholder="0.00"
-                className="h-16 border-primary/25 bg-primary/5 px-4 text-3xl font-semibold tracking-tight shadow-inner shadow-primary/5 focus-visible:border-primary/60"
-              />
+              <div className="space-y-1.5">
+                <Label htmlFor="porcentaje" className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Ganancia (%)</Label>
+                <Input
+                  id="porcentaje"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.tipo_operacion === "Comisión" ? "100" : formData.porcentaje_ganancia}
+                  onChange={(e) => setFormData({ ...formData, porcentaje_ganancia: e.target.value })}
+                  disabled={formData.tipo_operacion === "Comisión"}
+                  required
+                  placeholder="0"
+                  className={cn("h-12 bg-secondary/70 px-3 text-lg font-semibold", formData.tipo_operacion === "Comisión" && "cursor-not-allowed opacity-50")}
+                />
+              </div>
             </div>
-            <div className="space-y-2.5">
-              <Label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tipo de operación</Label>
-              <div role="radiogroup" aria-label="Tipo de operación" className="grid grid-cols-3 gap-2">
+
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tipo de operación</Label>
+              <div role="radiogroup" aria-label="Tipo de operación" className="grid grid-cols-4 gap-1.5">
                 {operationTypes.map((type) => {
                   const selected = formData.tipo_operacion === type.value;
                   return (
@@ -130,7 +165,7 @@ const CreateOperationDialog = ({ onSuccess }: CreateOperationDialogProps) => {
                         porcentaje_ganancia: type.value === "Comisión" ? "100" : current.tipo_operacion === "Comisión" ? "" : current.porcentaje_ganancia,
                       }))}
                       className={cn(
-                        "h-10 rounded-lg border px-2 text-xs font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
+                        "h-8 rounded-md border px-1 text-[11px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
                         type.color,
                         selected && type.active,
                       )}
@@ -142,93 +177,72 @@ const CreateOperationDialog = ({ onSuccess }: CreateOperationDialogProps) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="fecha" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Fecha</Label>
+            <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-gradient-to-r from-primary/15 to-success/5 px-3 py-2.5 shadow-inner shadow-primary/5">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary/80">Ganancia estimada</p>
+                <p className="mt-0.5 text-xl font-semibold text-foreground">
+                  {hasEstimatedGain ? `$${estimatedGain.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0,00"}
+                </p>
+              </div>
+              <div className="rounded-md bg-primary/15 p-1.5 text-primary">
+                <ArrowUpRight className="h-4 w-4" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 border-t border-border/60 pt-3">
+              <div className="space-y-1">
+                <Label htmlFor="fecha" className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Fecha</Label>
                 <Input
                   id="fecha"
                   type="date"
                   value={formData.fecha_operacion}
                   onChange={(e) => setFormData({ ...formData, fecha_operacion: e.target.value })}
                   required
-                  className="bg-secondary/70"
+                  className="h-8 bg-secondary/70 px-2 text-xs"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="porcentaje" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Ganancia (%)</Label>
+              <div className="space-y-1">
+                <Label htmlFor="id_op" className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">ID</Label>
                 <Input
-                  id="porcentaje"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.tipo_operacion === "Comisión" ? "100" : formData.porcentaje_ganancia}
-                  onChange={(e) => setFormData({ ...formData, porcentaje_ganancia: e.target.value })}
-                  disabled={formData.tipo_operacion === "Comisión"}
-                  required
-                  placeholder="0.00"
-                  className={cn("bg-secondary/70", formData.tipo_operacion === "Comisión" && "cursor-not-allowed opacity-50")}
+                  id="id_op"
+                  value={formData.id_operacion}
+                  onChange={(e) => setFormData({ ...formData, id_operacion: e.target.value })}
+                  placeholder="OP-12345"
+                  className="h-8 bg-secondary/70 px-2 text-xs"
                 />
               </div>
-            </div>
-
-            {formData.monto_total && formData.porcentaje_ganancia && (
-              <div className="flex items-center justify-between rounded-xl border border-primary/20 bg-gradient-to-br from-primary/15 to-success/5 px-4 py-3.5 shadow-inner shadow-primary/5">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary/80">Ganancia estimada</p>
-                  <p className="mt-1 text-2xl font-semibold text-foreground">
-                    ${((parseFloat(formData.monto_total) * parseFloat(formData.porcentaje_ganancia)) / 100).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-primary/15 p-2 text-primary">
-                  <ArrowUpRight className="h-5 w-5" />
-                </div>
+              <div className="space-y-1">
+                <Label htmlFor="emisora" className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Emisora</Label>
+                <Input
+                  id="emisora"
+                  value={formData.cuenta_emisora}
+                  onChange={(e) => setFormData({ ...formData, cuenta_emisora: e.target.value })}
+                  placeholder="Origen"
+                  className="h-8 bg-secondary/70 px-2 text-xs"
+                />
               </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="id_op" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">ID de operación</Label>
-              <Input
-                id="id_op"
-                value={formData.id_operacion}
-                onChange={(e) => setFormData({ ...formData, id_operacion: e.target.value })}
-                placeholder="OP-12345"
-                className="bg-secondary/70"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="emisora" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Cuenta emisora</Label>
-              <Input
-                id="emisora"
-                value={formData.cuenta_emisora}
-                onChange={(e) => setFormData({ ...formData, cuenta_emisora: e.target.value })}
-                placeholder="Origen"
-                className="bg-secondary/70"
-              />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="receptora" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Cuenta receptora</Label>
-              <Input
-                id="receptora"
-                value={formData.cuenta_receptora}
-                onChange={(e) => setFormData({ ...formData, cuenta_receptora: e.target.value })}
-                placeholder="Destino"
-                className="bg-secondary/70"
-              />
-            </div>
+              <div className="space-y-1">
+                <Label htmlFor="receptora" className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Receptora</Label>
+                <Input
+                  id="receptora"
+                  value={formData.cuenta_receptora}
+                  onChange={(e) => setFormData({ ...formData, cuenta_receptora: e.target.value })}
+                  placeholder="Destino"
+                  className="h-8 bg-secondary/70 px-2 text-xs"
+                />
+              </div>
             </div>
 
             {formData.tipo_operacion === "Comisión" && (
-              <p className="rounded-lg border border-success/20 bg-success/5 px-3 py-2 text-xs text-success">Las comisiones se registran con 100% de ganancia.</p>
+              <p className="rounded-md border border-success/20 bg-success/5 px-2.5 py-1.5 text-[11px] text-success">Las comisiones se registran con 100% de ganancia.</p>
             )}
           </div>
 
-          <div className="flex shrink-0 gap-3 border-t border-border/70 bg-card/90 px-5 py-4 backdrop-blur sm:px-6">
+          <div className="flex shrink-0 gap-2.5 border-t border-border/70 bg-card/90 px-4 py-3 backdrop-blur sm:px-5">
             <SheetClose asChild>
-              <Button type="button" variant="outline" className="flex-1 border-border/80 bg-secondary/50">Cancelar</Button>
+              <Button type="button" variant="outline" size="sm" className="flex-1 border-border/80 bg-secondary/50">Cancelar</Button>
             </SheetClose>
-            <Button type="submit" className="flex-[1.4] gap-2 shadow-lg shadow-primary/20" disabled={loading}>
+            <Button type="submit" size="sm" className="flex-[1.4] gap-2 shadow-lg shadow-primary/20" disabled={loading}>
               <Plus className="h-4 w-4" />
               {loading ? "Creando..." : "Crear operación"}
             </Button>
