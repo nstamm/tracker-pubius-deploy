@@ -9,6 +9,7 @@ import BottomNavigation from "@/components/BottomNavigation";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import BinanceP2P from "./pages/BinanceP2P";
+import Clients from "./pages/Clients";
 import Expenses from "./pages/Expenses";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -36,6 +37,7 @@ const App = () => (
                       <Routes>
                         <Route path="/" element={<Index />} />
                         <Route path="/binance-p2p" element={<BinanceP2P />} />
+                        <Route path="/clients" element={<Clients />} />
                         <Route path="/expenses" element={<Expenses />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>

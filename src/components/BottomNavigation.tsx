@@ -1,4 +1,4 @@
-import { DollarSign, Wallet } from "lucide-react";
+import { DollarSign, Wallet, UsersRound } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 
 const BottomNavigation = () => {
@@ -22,6 +22,14 @@ const BottomNavigation = () => {
         >
           <DollarSign className="h-5 w-5" />
           <span className="text-xs font-medium">Operaciones</span>
+        </NavLink>
+        <NavLink
+          to="/clients"
+          className="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-colors"
+          activeClassName="text-primary bg-primary/10"
+        >
+          <UsersRound className="h-5 w-5" />
+          <span className="text-xs font-medium">Clientes</span>
         </NavLink>
       </div>
     </nav>

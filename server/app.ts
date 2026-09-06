@@ -29,9 +29,16 @@ const operationSchema = z.object({
   id_operacion: z.string().max(200).nullable().optional(),
   cuenta_emisora: z.string().max(200).nullable().optional(),
   cuenta_receptora: z.string().max(200).nullable().optional(),
+  client_id: z.string().uuid().nullable().optional(),
   monto_total: z.number().finite().nonnegative().max(1_000_000_000),
   porcentaje_ganancia: z.number().finite().nonnegative().max(100),
   tipo_operacion: z.string().min(1).max(100),
+});
+
+const clientSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  email: z.string().trim().email().max(200).nullable().optional(),
+  phone: z.string().trim().max(50).nullable().optional(),
 });
 
 const expenseSchema = z.object({
@@ -231,23 +238,29 @@ export async function buildApp(options: AppOptions) {
 
   app.get("/api/operations", async (request, reply) => {
     const query = parseBody(
-      z.object({ from: dateSchema.optional(), to: dateSchema.optional() }),
+      z.object({ from: dateSchema.optional(), to: dateSchema.optional(), clientId: z.string().uuid().optional() }),
       request.query,
       reply,
     );
     if (!query) return;
-    return database.listOperations(query.from, query.to);
+    return database.listOperations(query.from, query.to, query.clientId);
   });
 
   app.post("/api/operations", async (request, reply) => {
     const input = parseBody(operationSchema, request.body, reply);
     if (!input) return;
+    if (input.client_id && !database.getClient(input.client_id)) {
+      return reply.code(400).send({ error: "Cliente no encontrado" });
+    }
     return reply.code(201).send(database.createOperation(input));
   });
 
   app.patch<{ Params: { id: string } }>("/api/operations/:id", async (request, reply) => {
     const update = parseBody(operationSchema.partial().refine((value) => Object.keys(value).length > 0), request.body, reply);
     if (!update) return;
+    if (update.client_id && !database.getClient(update.client_id)) {
+      return reply.code(400).send({ error: "Cliente no encontrado" });
+    }
     const operation = database.updateOperation(request.params.id, update);
     return operation ?? reply.code(404).send({ error: "Operación no encontrada" });
   });
@@ -255,6 +268,28 @@ export async function buildApp(options: AppOptions) {
   app.delete<{ Params: { id: string } }>("/api/operations/:id", async (request, reply) => {
     if (!database.deleteOperation(request.params.id)) {
       return reply.code(404).send({ error: "Operación no encontrada" });
+    }
+    return reply.code(204).send();
+  });
+
+  app.get("/api/clients", async () => database.listClients());
+
+  app.post("/api/clients", async (request, reply) => {
+    const input = parseBody(clientSchema, request.body, reply);
+    if (!input) return;
+    return reply.code(201).send(database.createClient(input));
+  });
+
+  app.patch<{ Params: { id: string } }>("/api/clients/:id", async (request, reply) => {
+    const update = parseBody(clientSchema.partial().refine((value) => Object.keys(value).length > 0), request.body, reply);
+    if (!update) return;
+    const client = database.updateClient(request.params.id, update);
+    return client ?? reply.code(404).send({ error: "Cliente no encontrado" });
+  });
+
+  app.delete<{ Params: { id: string } }>("/api/clients/:id", async (request, reply) => {
+    if (!database.deleteClient(request.params.id)) {
+      return reply.code(404).send({ error: "Cliente no encontrado" });
     }
     return reply.code(204).send();
   });

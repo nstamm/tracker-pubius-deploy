@@ -1,22 +1,27 @@
 import { useState, useEffect, useCallback } from "react";
 import { api, type Operation } from "@/lib/api";
+import type { Client } from "@/lib/api";
 import MetricCard from "@/components/Dashboard/MetricCard";
 import PeriodFilter, { Period } from "@/components/Dashboard/PeriodFilter";
 import TypeFilter, { OperationType } from "@/components/Dashboard/TypeFilter";
-import GainsChart from "@/components/Dashboard/GainsChart";
+import GainsChart, { type ChartGrouping, type ChartSeries } from "@/components/Dashboard/GainsChart";
 import CreateOperationDialog from "@/components/Dashboard/CreateOperationDialog";
 import VoiceAssistant from "@/components/VoiceAssistant";
 import OperationsTable from "@/components/Dashboard/OperationsTable";
 import { DollarSign, TrendingUp, Activity, BarChart3, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatLocalDate } from "@/lib/utils";
 
 const Dashboard = () => {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [previousOperations, setPreviousOperations] = useState<Operation[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [period, setPeriod] = useState<Period>("month");
   const [typeFilter, setTypeFilter] = useState<OperationType>("all");
+  const [clientFilter, setClientFilter] = useState("all");
+  const [chartGrouping, setChartGrouping] = useState<ChartGrouping>("type");
   const [loading, setLoading] = useState(true);
 
   const fetchOperations = useCallback(async () => {
@@ -76,8 +81,8 @@ const Dashboard = () => {
             to: prevEndDate.toISOString().split("T")[0],
           };
       const [current, previous] = await Promise.all([
-        api.operations.list(currentFilters),
-        previousFilters ? api.operations.list(previousFilters) : Promise.resolve([]),
+        api.operations.list({ ...currentFilters, ...(clientFilter === "all" ? {} : { clientId: clientFilter }) }),
+        previousFilters ? api.operations.list({ ...previousFilters, ...(clientFilter === "all" ? {} : { clientId: clientFilter }) }) : Promise.resolve([]),
       ]);
       setOperations(current);
       setPreviousOperations(previous);
@@ -86,7 +91,11 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [period, clientFilter]);
+
+  useEffect(() => {
+    api.clients.list().then(setClients).catch((error) => console.error("Error fetching clients:", error));
+  }, []);
 
   useEffect(() => {
     fetchOperations();
@@ -151,34 +160,41 @@ const Dashboard = () => {
   const operationsChange = calcPercentChange(filteredOperations.length, filteredPreviousOperations.length);
   const avgPercentageChange = calcPercentChange(avgPercentage, avgPercentagePrev);
 
-  // Prepare chart data with separate vectors for each operation type
-  // First, get all unique operation types
-  const allTypes = Array.from(new Set(filteredOperations.map(op => op.tipo_operacion?.toLowerCase() || "otros")));
-  
   type ChartPoint = { date: string; ganancia: number; monto_total: number; [key: string]: string | number };
+  const chartColors = [
+    "hsl(270, 70%, 60%)", "hsl(199, 89%, 65%)", "hsl(271, 91%, 65%)", "hsl(38, 92%, 50%)",
+    "hsl(345, 80%, 50%)", "hsl(150, 65%, 45%)", "hsl(30, 85%, 55%)", "hsl(210, 75%, 60%)",
+  ];
+  const seriesByIdentity = new Map<string, ChartSeries>();
   const chartData = filteredOperations.reduce<ChartPoint[]>((acc, op) => {
     const date = formatLocalDate(op.fecha_operacion, { month: 'short', day: 'numeric' });
     const existing = acc.find((item) => item.date === date);
-    const tipo = op.tipo_operacion?.toLowerCase() || "otros";
+    const client = clients.find((item) => item.id === op.client_id);
+    const identity = chartGrouping === "type" ? `type:${op.tipo_operacion}` : `client:${op.client_id ?? "unassigned"}`;
+    const label = chartGrouping === "type" ? op.tipo_operacion : client?.title ?? "Sin cliente";
+    let series = seriesByIdentity.get(identity);
+    if (!series) {
+      series = { key: `series-${seriesByIdentity.size}`, label, color: chartColors[seriesByIdentity.size % chartColors.length] };
+      seriesByIdentity.set(identity, series);
+    }
     
     if (existing) {
       existing.ganancia += op.ganancia || 0;
       existing.monto_total += op.monto_total || 0;
-      existing[tipo] = Number(existing[tipo] ?? 0) + (op.ganancia || 0);
+      existing[series.key] = Number(existing[series.key] ?? 0) + (op.ganancia || 0);
     } else {
-      // Initialize all types with 0
       const newEntry: ChartPoint = {
         date,
         ganancia: op.ganancia || 0,
         monto_total: op.monto_total || 0,
       };
-      allTypes.forEach(type => {
-        newEntry[type] = type === tipo ? (op.ganancia || 0) : 0;
-      });
+      newEntry[series.key] = op.ganancia || 0;
       acc.push(newEntry);
     }
     return acc;
   }, []).reverse();
+  const chartSeries = Array.from(seriesByIdentity.values());
+  chartData.forEach((point) => chartSeries.forEach((series) => { point[series.key] ??= 0; }));
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.12),transparent_32%),hsl(var(--background))] lg:h-dvh lg:overflow-hidden">
@@ -192,8 +208,17 @@ const Dashboard = () => {
             <div className="grid grid-cols-2 gap-2 sm:flex">
               <PeriodFilter value={period} onChange={setPeriod} />
               <TypeFilter value={typeFilter} onChange={setTypeFilter} />
+              <Select value={clientFilter} onValueChange={setClientFilter}>
+                <SelectTrigger className="w-full bg-secondary sm:w-[180px]">
+                  <SelectValue placeholder="Cliente" />
+                </SelectTrigger>
+                <SelectContent className="z-50 border-border bg-popover">
+                  <SelectItem value="all">Todos los clientes</SelectItem>
+                  {clients.map((client) => <SelectItem key={client.id} value={client.id}>{client.title}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-            <CreateOperationDialog onSuccess={fetchOperations} />
+            <CreateOperationDialog clients={clients} onSuccess={fetchOperations} />
           </div>
         </div>
 
@@ -225,7 +250,7 @@ const Dashboard = () => {
                   No hay operaciones en este período
                 </p>
               ) : (
-                <OperationsTable operations={filteredOperations} onUpdate={fetchOperations} onDelete={fetchOperations} />
+                <OperationsTable clients={clients} operations={filteredOperations} onUpdate={fetchOperations} onDelete={fetchOperations} />
               )}
             </CardContent>
           </Card>
@@ -257,7 +282,7 @@ const Dashboard = () => {
               />
             </div>
 
-            <GainsChart data={chartData} compact />
+            <GainsChart data={chartData} series={chartSeries} grouping={chartGrouping} onGroupingChange={setChartGrouping} compact />
           </section>
         </div>
 

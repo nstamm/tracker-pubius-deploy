@@ -7,9 +7,12 @@ import { api, getErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ArrowUpRight, Plus, Sparkles } from "lucide-react";
+import ClientSelect from "@/components/ClientSelect";
+import type { Client } from "@/lib/api";
 
 interface CreateOperationDialogProps {
   onSuccess: () => void;
+  clients: Client[];
 }
 
 const operationTypes = [
@@ -31,6 +34,7 @@ const initialFormData = () => ({
   id_operacion: "",
   cuenta_emisora: "",
   cuenta_receptora: "",
+  client_id: null as string | null,
   monto_total: "",
   porcentaje_ganancia: "",
   tipo_operacion: "",
@@ -47,7 +51,7 @@ const formatAmount = (value: string): string => {
 
 const amountToNumber = (value: string): number => Number(value.replace(/\./g, "").replace(",", "."));
 
-const CreateOperationDialog = ({ onSuccess }: CreateOperationDialogProps) => {
+const CreateOperationDialog = ({ clients, onSuccess }: CreateOperationDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
@@ -74,6 +78,7 @@ const CreateOperationDialog = ({ onSuccess }: CreateOperationDialogProps) => {
         id_operacion: formData.id_operacion,
         cuenta_emisora: formData.cuenta_emisora,
         cuenta_receptora: formData.cuenta_receptora,
+        client_id: formData.client_id,
         monto_total: amount,
         porcentaje_ganancia: percentage,
         tipo_operacion: formData.tipo_operacion,
@@ -190,6 +195,10 @@ const CreateOperationDialog = ({ onSuccess }: CreateOperationDialogProps) => {
             </div>
 
             <div className="grid grid-cols-2 gap-2.5 border-t border-border/60 pt-3">
+              <div className="col-span-2 space-y-1">
+                <Label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Cliente</Label>
+                <ClientSelect clients={clients} value={formData.client_id} onValueChange={(client_id) => setFormData((current) => ({ ...current, client_id }))} />
+              </div>
               <div className="space-y-1">
                 <Label htmlFor="fecha" className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Fecha</Label>
                 <Input

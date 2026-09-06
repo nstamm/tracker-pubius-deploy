@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "./app.js";
 import { hashPassword } from "./auth.js";
@@ -183,6 +184,103 @@ describe("monthly report scheduling", () => {
 });
 
 describe("financial records", () => {
+  it("manages clients, filters their operations and unlinks them on deletion", async () => {
+    const app = await createTestApp();
+    const cookie = await login(app);
+    const createdClient = await app.inject({
+      method: "POST",
+      url: "/api/clients",
+      headers: { cookie },
+      payload: { title: "Acme Corp", email: "contact@acme.test" },
+    });
+    expect(createdClient.statusCode).toBe(201);
+    expect(createdClient.json()).toMatchObject({ title: "Acme Corp", email: "contact@acme.test", phone: null });
+
+    const clientId = createdClient.json().id;
+    const updatedClient = await app.inject({
+      method: "PATCH",
+      url: `/api/clients/${clientId}`,
+      headers: { cookie },
+      payload: { phone: "+54 11 5555 0000" },
+    });
+    expect(updatedClient.json()).toMatchObject({ title: "Acme Corp", phone: "+54 11 5555 0000" });
+
+    const createdOperation = await app.inject({
+      method: "POST",
+      url: "/api/operations",
+      headers: { cookie },
+      payload: {
+        fecha_operacion: "2026-08-26",
+        monto_total: 100,
+        porcentaje_ganancia: 2,
+        tipo_operacion: "Zelle",
+        client_id: clientId,
+      },
+    });
+    expect(createdOperation.statusCode).toBe(201);
+    expect(createdOperation.json()).toMatchObject({ client_id: clientId });
+
+    const filtered = await app.inject({ method: "GET", url: `/api/operations?clientId=${clientId}`, headers: { cookie } });
+    expect(filtered.json()).toHaveLength(1);
+
+    const invalidClient = await app.inject({
+      method: "PATCH",
+      url: `/api/operations/${createdOperation.json().id}`,
+      headers: { cookie },
+      payload: { client_id: "00000000-0000-4000-8000-000000000000" },
+    });
+    expect(invalidClient.statusCode).toBe(400);
+
+    const deleted = await app.inject({ method: "DELETE", url: `/api/clients/${clientId}`, headers: { cookie } });
+    expect(deleted.statusCode).toBe(204);
+    const operations = await app.inject({ method: "GET", url: "/api/operations", headers: { cookie } });
+    expect(operations.json()).toMatchObject([{ id: createdOperation.json().id, client_id: null }]);
+  });
+
+  it("adds the optional client link when opening an existing database", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "pubius-client-migration-"));
+    const databasePath = join(directory, "pubius.sqlite");
+    const legacyDatabase = new DatabaseSync(databasePath);
+    legacyDatabase.exec(`
+      CREATE TABLE operations (
+        id TEXT PRIMARY KEY,
+        fecha_operacion TEXT NOT NULL,
+        id_operacion TEXT,
+        cuenta_emisora TEXT,
+        cuenta_receptora TEXT,
+        monto_centavos INTEGER NOT NULL,
+        porcentaje_puntos INTEGER NOT NULL,
+        ganancia_centavos INTEGER NOT NULL,
+        tipo_operacion TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+    `);
+    legacyDatabase.close();
+
+    const app = await buildApp({
+      databasePath,
+      authEmail: "owner@example.com",
+      authPasswordHash: hashPassword("correct-password"),
+      cookieSecret: "test-secret-with-at-least-twenty-characters",
+      cookieSecure: false,
+    });
+    try {
+      const cookie = await login(app);
+      const client = await app.inject({ method: "POST", url: "/api/clients", headers: { cookie }, payload: { title: "Legacy client" } });
+      expect(client.statusCode).toBe(201);
+      const operation = await app.inject({
+        method: "POST",
+        url: "/api/operations",
+        headers: { cookie },
+        payload: { fecha_operacion: "2026-08-26", monto_total: 1, porcentaje_ganancia: 1, tipo_operacion: "Zelle", client_id: client.json().id },
+      });
+      expect(operation.statusCode).toBe(201);
+    } finally {
+      await app.close();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it("creates, recalculates and deletes operations without floating point storage errors", async () => {
     const app = await createTestApp();
     const cookie = await login(app);

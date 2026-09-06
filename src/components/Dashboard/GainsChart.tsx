@@ -1,28 +1,29 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface ChartData {
+export interface ChartData {
   date: string;
   ganancia: number;
   monto_total: number;
   [key: string]: string | number;
 }
 
-interface GainsChartProps {
-  data: ChartData[];
-  compact?: boolean;
+export type ChartGrouping = "type" | "client";
+
+export interface ChartSeries {
+  key: string;
+  label: string;
+  color: string;
 }
 
-const typeColors: { [key: string]: string } = {
-  zelle: "hsl(270, 70%, 60%)",
-  paypal: "hsl(199, 89%, 65%)",
-  skrill: "hsl(271, 91%, 65%)",
-  binance: "hsl(38, 92%, 50%)",
-  slash: "hsl(345, 80%, 35%)",
-  mercury: "hsl(0, 0%, 100%)",
-  "a definir": "hsl(var(--muted-foreground))",
-  otros: "hsl(var(--accent))",
-};
+interface GainsChartProps {
+  data: ChartData[];
+  series: ChartSeries[];
+  grouping: ChartGrouping;
+  onGroupingChange: (grouping: ChartGrouping) => void;
+  compact?: boolean;
+}
 
 interface TooltipEntry {
   color: string;
@@ -66,12 +67,10 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Toolti
 
 const CustomLegend = ({ payload }: { payload?: LegendEntry[] }) => {
   if (!payload) return null;
-  
-  const filteredPayload = payload.filter((entry) => entry.value !== "a definir");
-  
+
   return (
     <div className="flex flex-wrap justify-center gap-3 pt-4">
-      {filteredPayload.map((entry, index) => (
+      {payload.map((entry, index) => (
         <div key={index} className="flex items-center gap-1.5">
           <span 
             className="w-2 h-2 rounded-full" 
@@ -86,22 +85,20 @@ const CustomLegend = ({ payload }: { payload?: LegendEntry[] }) => {
   );
 };
 
-const GainsChart = ({ data, compact = false }: GainsChartProps) => {
-  // Get all unique operation types from the data
-  const operationTypes = Array.from(
-    new Set(
-      data.flatMap(item => 
-        Object.keys(item).filter(key => 
-          key !== 'date' && key !== 'ganancia' && key !== 'monto_total'
-        )
-      )
-    )
-  );
-
+const GainsChart = ({ data, series, grouping, onGroupingChange, compact = false }: GainsChartProps) => {
   return (
     <Card className={compact ? "flex h-full min-h-0 flex-col overflow-hidden border-border/80 bg-card/90 shadow-xl shadow-black/5" : "col-span-full overflow-hidden"}>
-      <CardHeader className={compact ? "shrink-0 border-b border-border/70 px-4 py-3" : "p-4 md:p-6"}>
-        <CardTitle className="text-base md:text-lg">Ganancias por operación</CardTitle>
+      <CardHeader className={compact ? "flex shrink-0 flex-row items-center justify-between gap-3 border-b border-border/70 px-4 py-3" : "flex flex-row items-center justify-between gap-3 p-4 md:p-6"}>
+        <CardTitle className="text-base md:text-lg">Ganancias por {grouping === "type" ? "tipo" : "cliente"}</CardTitle>
+        <Select value={grouping} onValueChange={(value) => onGroupingChange(value as ChartGrouping)}>
+          <SelectTrigger className="h-8 w-[145px] bg-secondary text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="z-50 border-border bg-popover">
+            <SelectItem value="type">Por tipo</SelectItem>
+            <SelectItem value="client">Por cliente</SelectItem>
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent className={compact ? "min-h-0 flex-1 p-3" : "w-full min-w-0 p-2 md:p-6"}>
         <div className={compact ? "h-[260px] w-full min-w-0 max-w-full lg:h-full" : "h-[200px] w-full min-w-0 max-w-full md:h-[400px]"}>
@@ -111,16 +108,16 @@ const GainsChart = ({ data, compact = false }: GainsChartProps) => {
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             >
             <defs>
-              {operationTypes.map((tipo) => (
-                <linearGradient key={tipo} id={`color${tipo}`} x1="0" y1="0" x2="0" y2="1">
+              {series.map((item) => (
+                <linearGradient key={item.key} id={`color-${item.key}`} x1="0" y1="0" x2="0" y2="1">
                   <stop 
                     offset="5%" 
-                    stopColor={typeColors[tipo] || typeColors.otros} 
+                    stopColor={item.color}
                     stopOpacity={0.4} 
                   />
                   <stop 
                     offset="95%" 
-                    stopColor={typeColors[tipo] || typeColors.otros} 
+                    stopColor={item.color}
                     stopOpacity={0.05} 
                   />
                 </linearGradient>
@@ -145,15 +142,15 @@ const GainsChart = ({ data, compact = false }: GainsChartProps) => {
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend content={<CustomLegend />} />
-            {operationTypes.map((tipo) => (
+            {series.map((item) => (
               <Area
-                key={tipo}
+                key={item.key}
                 type="monotone"
-                dataKey={tipo}
-                name={tipo}
-                stroke={typeColors[tipo] || typeColors.otros}
+                dataKey={item.key}
+                name={item.label}
+                stroke={item.color}
                 strokeWidth={2.5}
-                fill={`url(#color${tipo})`}
+                fill={`url(#color-${item.key})`}
                 fillOpacity={1}
               />
             ))}

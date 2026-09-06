@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { DollarSign, ArrowLeftRight, Wallet, LogOut } from "lucide-react";
+import { DollarSign, ArrowLeftRight, Wallet, UsersRound, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { api, getErrorMessage } from "@/lib/api";
 import InstallGuide from "@/components/InstallGuide";
@@ -35,6 +35,11 @@ const menuItems = [
     title: "Egresos",
     url: "/expenses",
     icon: Wallet,
+  },
+  {
+    title: "Clientes",
+    url: "/clients",
+    icon: UsersRound,
   },
 ];
 

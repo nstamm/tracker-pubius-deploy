@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Pencil, Check, X, Eye } from "lucide-react";
 import { api, getErrorMessage, type OperationInput } from "@/lib/api";
+import type { Client } from "@/lib/api";
+import ClientSelect from "@/components/ClientSelect";
 import { toast } from "sonner";
 import { formatLocalDate } from "@/lib/utils";
 import {
@@ -35,6 +37,7 @@ interface Operation {
   id_operacion: string;
   cuenta_emisora: string;
   cuenta_receptora: string;
+  client_id: string | null;
   monto_total: number;
   porcentaje_ganancia: number;
   ganancia: number;
@@ -43,11 +46,12 @@ interface Operation {
 
 interface OperationsTableProps {
   operations: Operation[];
+  clients: Client[];
   onUpdate: () => void;
   onDelete: () => void;
 }
 
-type EditableOperationField = "fecha_operacion" | "monto_total" | "porcentaje_ganancia" | "tipo_operacion";
+type EditableOperationField = "fecha_operacion" | "monto_total" | "porcentaje_ganancia" | "tipo_operacion" | "client_id";
 
 const getTypeBadgeColor = (tipo: string) => {
   const lowerTipo = tipo?.toLowerCase() || "";
@@ -64,7 +68,7 @@ const getTypeBadgeColor = (tipo: string) => {
   return "bg-muted text-muted-foreground border-border";
 };
 
-const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProps) => {
+const OperationsTable = ({ clients, operations, onUpdate, onDelete }: OperationsTableProps) => {
   const [editingCell, setEditingCell] = useState<{ id: string; field: EditableOperationField } | null>(null);
   const [editValue, setEditValue] = useState<string | number>("");
   const [selectedOperation, setSelectedOperation] = useState<Operation | null>(null);
@@ -88,7 +92,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
     }
   };
 
-  const saveField = async (id: string, field: EditableOperationField, value: string | number, operation: Operation) => {
+  const saveField = async (id: string, field: EditableOperationField, value: string | number | null, operation: Operation) => {
     try {
       await api.operations.update(id, { [field]: value } as Partial<OperationInput>);
 
@@ -169,7 +173,7 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
               onSort={handleSort}
               className="w-[32%] sm:w-[26%] xl:w-[24%]"
             >
-              Tipo
+              Tipo / cliente
             </SortableTableHead>
             <SortableTableHead
               field="monto_total"
@@ -254,29 +258,36 @@ const OperationsTable = ({ operations, onUpdate, onDelete }: OperationsTableProp
 
                 {/* Tipo - Visible on all screens */}
                 <TableCell className="w-[32%] sm:w-[26%] xl:w-[24%]">
-                  <Select
-                    value={operation.tipo_operacion}
-                    onValueChange={(value) => saveField(operation.id, "tipo_operacion", value, operation)}
-                  >
-                    <SelectTrigger className="h-8 w-full min-w-0 border-0 bg-transparent px-1 hover:bg-secondary/50">
-                      <Badge variant="outline" className={`max-w-full truncate ${getTypeBadgeColor(operation.tipo_operacion)}`}>
-                        {operation.tipo_operacion}
-                      </Badge>
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border z-50">
-                      <SelectItem value="Zelle">Zelle</SelectItem>
-                      <SelectItem value="Paypal">Paypal</SelectItem>
-                      <SelectItem value="Skrill">Skrill</SelectItem>
-                      <SelectItem value="Binance">Binance</SelectItem>
-                      <SelectItem value="Slash">Slash</SelectItem>
-                      <SelectItem value="Mercury">Mercury</SelectItem>
-                      <SelectItem value="Venmo">Venmo</SelectItem>
-                      <SelectItem value="Cash App">Cash App</SelectItem>
-                      <SelectItem value="Chime">Chime</SelectItem>
-                      <SelectItem value="Comisión">Comisión</SelectItem>
-                      <SelectItem value="A definir">A definir</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-1.5">
+                    <Select
+                      value={operation.tipo_operacion}
+                      onValueChange={(value) => saveField(operation.id, "tipo_operacion", value, operation)}
+                    >
+                      <SelectTrigger className="h-8 w-full min-w-0 border-0 bg-transparent px-1 hover:bg-secondary/50">
+                        <Badge variant="outline" className={`max-w-full truncate ${getTypeBadgeColor(operation.tipo_operacion)}`}>
+                          {operation.tipo_operacion}
+                        </Badge>
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50">
+                        <SelectItem value="Zelle">Zelle</SelectItem>
+                        <SelectItem value="Paypal">Paypal</SelectItem>
+                        <SelectItem value="Skrill">Skrill</SelectItem>
+                        <SelectItem value="Binance">Binance</SelectItem>
+                        <SelectItem value="Slash">Slash</SelectItem>
+                        <SelectItem value="Mercury">Mercury</SelectItem>
+                        <SelectItem value="Venmo">Venmo</SelectItem>
+                        <SelectItem value="Cash App">Cash App</SelectItem>
+                        <SelectItem value="Chime">Chime</SelectItem>
+                        <SelectItem value="Comisión">Comisión</SelectItem>
+                        <SelectItem value="A definir">A definir</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <ClientSelect
+                      clients={clients}
+                      value={operation.client_id}
+                      onValueChange={(client_id) => saveField(operation.id, "client_id", client_id, operation)}
+                    />
+                  </div>
                 </TableCell>
 
                 {/* Monto Total - Visible on all screens */}
