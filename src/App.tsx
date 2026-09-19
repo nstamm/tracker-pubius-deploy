@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import BinanceP2P from "./pages/BinanceP2P";
 import Clients from "./pages/Clients";
+import AccountHolders from "./pages/AccountHolders";
 import Expenses from "./pages/Expenses";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -24,30 +25,26 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <SidebarProvider defaultOpen={false}>
-                  <div className="flex min-h-screen w-full">
-                    <div className="hidden md:flex">
-                      <AppSidebar />
-                    </div>
-                    <main className="flex-1 pb-20 md:pb-0">
-                      <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/binance-p2p" element={<BinanceP2P />} />
-                        <Route path="/clients" element={<Clients />} />
-                        <Route path="/expenses" element={<Expenses />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </main>
-                    <BottomNavigation />
-                  </div>
-                </SidebarProvider>
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/*" element={
+            <ProtectedRoute>
+              <SidebarProvider defaultOpen={false}>
+                <div className="flex min-h-screen w-full">
+                  <div className="hidden md:flex"><AppSidebar /></div>
+                  <main className="flex-1 pb-20 md:pb-0">
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/binance-p2p" element={<BinanceP2P />} />
+                      <Route path="/accounts" element={<AccountHolders />} />
+                      <Route path="/clients" element={<Clients />} />
+                      <Route path="/expenses" element={<Expenses />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </main>
+                  <BottomNavigation />
+                </div>
+              </SidebarProvider>
+            </ProtectedRoute>
+          } />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
