@@ -200,6 +200,7 @@ export class AppDatabase {
     }
     this.db.exec("CREATE INDEX IF NOT EXISTS operations_client_idx ON operations(client_id)");
     this.db.exec("CREATE INDEX IF NOT EXISTS operations_account_holder_idx ON operations(account_holder_id)");
+    this.applyPubiusHistoricalDefaults();
   }
 
   close(): void {
@@ -217,6 +218,35 @@ export class AppDatabase {
 
   setAuthPasswordHash(passwordHash: string): void {
     this.db.prepare("UPDATE app_settings SET value = ? WHERE key = 'auth_password_hash'").run(passwordHash);
+  }
+
+  private applyPubiusHistoricalDefaults(): void {
+    const migrationKey = "pubius_mercury_backfill_v1";
+    const alreadyApplied = this.db.prepare("SELECT 1 FROM app_settings WHERE key = ?").get(migrationKey);
+    if (alreadyApplied) return;
+
+    this.db.exec("BEGIN");
+    try {
+      const now = new Date().toISOString();
+      let client = this.db.prepare("SELECT id FROM clients WHERE title = ? ORDER BY created_at LIMIT 1").get("Nahuel Carpincho") as { id: string } | undefined;
+      if (!client) {
+        client = { id: randomUUID() };
+        this.db.prepare("INSERT INTO clients (id, title, email, phone, created_at) VALUES (?, ?, NULL, NULL, ?)").run(client.id, "Nahuel Carpincho", now);
+      }
+
+      let accountHolder = this.db.prepare("SELECT id FROM account_holders WHERE name = ? ORDER BY created_at LIMIT 1").get("Pubius") as { id: string } | undefined;
+      if (!accountHolder) {
+        accountHolder = { id: randomUUID() };
+        this.db.prepare("INSERT INTO account_holders (id, name, bank, created_at) VALUES (?, ?, ?, ?)").run(accountHolder.id, "Pubius", "Pendiente", now);
+      }
+
+      this.db.prepare("UPDATE operations SET client_id = ?, account_holder_id = ? WHERE tipo_operacion = ?").run(client.id, accountHolder.id, "Mercury");
+      this.db.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?)").run(migrationKey, now);
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   listSentReportPeriods(): Set<string> {

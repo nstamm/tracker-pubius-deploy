@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { Badge } from "@/components/ui/badge";
@@ -58,11 +58,11 @@ type EditableOperationField = "fecha_operacion" | "monto_total" | "porcentaje_ga
 
 const operationTypes = ["Zelle", "Paypal", "Skrill", "Binance", "Slash", "Mercury", "Venmo", "Cash App", "Chime", "Comisión", "A definir"];
 
-const initialNewOperation = () => ({
+const initialNewOperation = (accountHolderId: string | null = null) => ({
   fecha_operacion: new Date().toISOString().split("T")[0],
   tipo_operacion: "",
   client_id: null as string | null,
-  account_holder_id: null as string | null,
+  account_holder_id: accountHolderId,
   monto_total: "",
   porcentaje_ganancia: "",
 });
@@ -87,8 +87,13 @@ const OperationsTable = ({ clients, accountHolders, operations, onUpdate, onDele
   const [editValue, setEditValue] = useState<string | number>("");
   const [selectedOperation, setSelectedOperation] = useState<Operation | null>(null);
   const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
-  const [newOperation, setNewOperation] = useState(initialNewOperation);
+  const defaultAccountHolderId = accountHolders.find((holder) => holder.name.trim().toLowerCase() === "pubius")?.id ?? null;
+  const [newOperation, setNewOperation] = useState(() => initialNewOperation());
   const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    setNewOperation((current) => current.account_holder_id ? current : { ...current, account_holder_id: defaultAccountHolderId });
+  }, [defaultAccountHolderId]);
 
   const startEdit = (id: string, field: EditableOperationField, value: string | number) => {
     setEditingCell({ id, field });
@@ -158,7 +163,7 @@ const OperationsTable = ({ clients, accountHolders, operations, onUpdate, onDele
         tipo_operacion: newOperation.tipo_operacion,
       });
       toast.success("Operación creada exitosamente");
-      setNewOperation(initialNewOperation());
+      setNewOperation(initialNewOperation(defaultAccountHolderId));
       onUpdate();
     } catch (error) {
       toast.error(getErrorMessage(error, "Error al crear operación"));
@@ -324,7 +329,7 @@ const OperationsTable = ({ clients, accountHolders, operations, onUpdate, onDele
                 <Button type="button" size="icon" className="h-8 w-8" onClick={handleCreate} disabled={creating} aria-label="Crear operación">
                   <Check className="h-4 w-4" />
                 </Button>
-                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setNewOperation(initialNewOperation())} disabled={creating} aria-label="Limpiar nueva operación">
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setNewOperation(initialNewOperation(defaultAccountHolderId))} disabled={creating} aria-label="Limpiar nueva operación">
                   <X className="h-4 w-4" />
                 </Button>
               </div>

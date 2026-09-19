@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,13 +31,13 @@ const operationTypes = [
   { value: "A definir", color: "border-border bg-muted/50 text-muted-foreground", active: "border-muted-foreground/70 bg-muted text-foreground" },
 ] as const;
 
-const initialFormData = () => ({
+const initialFormData = (accountHolderId: string | null = null) => ({
   fecha_operacion: new Date().toISOString().split("T")[0],
   id_operacion: "",
   cuenta_emisora: "",
   cuenta_receptora: "",
   client_id: null as string | null,
-  account_holder_id: null as string | null,
+  account_holder_id: accountHolderId,
   monto_total: "",
   porcentaje_ganancia: "",
   tipo_operacion: "",
@@ -57,7 +57,11 @@ const amountToNumber = (value: string): number => Number(value.replace(/\./g, ""
 const CreateOperationDialog = ({ clients, accountHolders, onSuccess }: CreateOperationDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState(initialFormData);
+  const defaultAccountHolderId = accountHolders.find((holder) => holder.name.trim().toLowerCase() === "pubius")?.id ?? null;
+  const [formData, setFormData] = useState(() => initialFormData());
+  useEffect(() => {
+    setFormData((current) => current.account_holder_id ? current : { ...current, account_holder_id: defaultAccountHolderId });
+  }, [defaultAccountHolderId]);
   const amount = amountToNumber(formData.monto_total);
   const percentage = formData.tipo_operacion === "Comisión" ? 100 : Number(formData.porcentaje_ganancia);
   const estimatedGain = amount * (percentage / 100);
@@ -90,7 +94,7 @@ const CreateOperationDialog = ({ clients, accountHolders, onSuccess }: CreateOpe
 
       toast.success("Operación creada exitosamente");
       setOpen(false);
-      setFormData(initialFormData());
+      setFormData(initialFormData(defaultAccountHolderId));
       onSuccess();
     } catch (error) {
       toast.error(getErrorMessage(error, "Error al crear operación"));
