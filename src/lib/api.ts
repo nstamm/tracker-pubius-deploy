@@ -5,10 +5,18 @@ export interface Operation {
   cuenta_emisora: string | null;
   cuenta_receptora: string | null;
   client_id: string | null;
+  account_holder_id: string | null;
   monto_total: number;
   porcentaje_ganancia: number;
   ganancia: number;
   tipo_operacion: string;
+  created_at: string;
+}
+
+export interface AccountHolder {
+  id: string;
+  name: string;
+  bank: string;
   created_at: string;
 }
 
@@ -29,7 +37,8 @@ export interface Expense {
   created_at: string;
 }
 
-export type OperationInput = Omit<Operation, "id" | "ganancia" | "created_at" | "client_id"> & { client_id?: string | null };
+export type OperationInput = Omit<Operation, "id" | "ganancia" | "created_at" | "client_id" | "account_holder_id"> & { client_id?: string | null; account_holder_id?: string | null };
+export type AccountHolderInput = { name: string; bank: string };
 export type ClientInput = { title: string; email?: string | null; phone?: string | null };
 export type ExpenseInput = Omit<Expense, "id" | "created_at">;
 
@@ -77,7 +86,7 @@ export const api = {
     }),
   },
   operations: {
-    list: (filters: { from?: string; to?: string; clientId?: string } = {}) => {
+    list: (filters: { from?: string; to?: string; clientId?: string; accountHolderId?: string } = {}) => {
       const query = new URLSearchParams(filters).toString();
       return request<Operation[]>(`/api/operations${query ? `?${query}` : ""}`);
     },
@@ -90,6 +99,12 @@ export const api = {
       body: JSON.stringify(input),
     }),
     remove: (id: string) => request<void>(`/api/operations/${id}`, { method: "DELETE" }),
+  },
+  accountHolders: {
+    list: () => request<AccountHolder[]>("/api/account-holders"),
+    create: (input: AccountHolderInput) => request<AccountHolder>("/api/account-holders", { method: "POST", body: JSON.stringify(input) }),
+    update: (id: string, input: Partial<AccountHolderInput>) => request<AccountHolder>(`/api/account-holders/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
+    remove: (id: string) => request<void>(`/api/account-holders/${id}`, { method: "DELETE" }),
   },
   clients: {
     list: () => request<Client[]>("/api/clients"),
