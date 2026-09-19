@@ -56,6 +56,17 @@ interface OperationsTableProps {
 
 type EditableOperationField = "fecha_operacion" | "monto_total" | "porcentaje_ganancia" | "tipo_operacion" | "client_id" | "account_holder_id";
 
+const operationTypes = ["Zelle", "Paypal", "Skrill", "Binance", "Slash", "Mercury", "Venmo", "Cash App", "Chime", "Comisión", "A definir"];
+
+const initialNewOperation = () => ({
+  fecha_operacion: new Date().toISOString().split("T")[0],
+  tipo_operacion: "",
+  client_id: null as string | null,
+  account_holder_id: null as string | null,
+  monto_total: "",
+  porcentaje_ganancia: "",
+});
+
 const getTypeBadgeColor = (tipo: string) => {
   const lowerTipo = tipo?.toLowerCase() || "";
   if (lowerTipo.includes("zelle")) return "bg-blue-500/20 text-blue-400 border-blue-500/30";
@@ -76,6 +87,8 @@ const OperationsTable = ({ clients, accountHolders, operations, onUpdate, onDele
   const [editValue, setEditValue] = useState<string | number>("");
   const [selectedOperation, setSelectedOperation] = useState<Operation | null>(null);
   const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
+  const [newOperation, setNewOperation] = useState(initialNewOperation);
+  const [creating, setCreating] = useState(false);
 
   const startEdit = (id: string, field: EditableOperationField, value: string | number) => {
     setEditingCell({ id, field });
@@ -115,6 +128,42 @@ const OperationsTable = ({ clients, accountHolders, operations, onUpdate, onDele
       onDelete();
     } catch (error) {
       toast.error(getErrorMessage(error, "Error al eliminar"));
+    }
+  };
+
+  const handleCreate = async () => {
+    const amount = Number(newOperation.monto_total);
+    const percentage = newOperation.tipo_operacion === "Comisión" ? 100 : Number(newOperation.porcentaje_ganancia);
+
+    if (!newOperation.tipo_operacion) {
+      toast.error("Elegí el tipo de operación");
+      return;
+    }
+    if (!Number.isFinite(amount) || amount < 0 || !Number.isFinite(percentage) || percentage < 0) {
+      toast.error("Completá monto y ganancia con valores válidos");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      await api.operations.create({
+        fecha_operacion: newOperation.fecha_operacion,
+        id_operacion: "",
+        cuenta_emisora: "",
+        cuenta_receptora: "",
+        client_id: newOperation.client_id,
+        account_holder_id: newOperation.account_holder_id,
+        monto_total: amount,
+        porcentaje_ganancia: percentage,
+        tipo_operacion: newOperation.tipo_operacion,
+      });
+      toast.success("Operación creada exitosamente");
+      setNewOperation(initialNewOperation());
+      onUpdate();
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Error al crear operación"));
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -206,6 +255,81 @@ const OperationsTable = ({ clients, accountHolders, operations, onUpdate, onDele
           </TableRow>
         </TableHeader>
         <TableBody>
+          <TableRow className="bg-primary/5 hover:bg-primary/10">
+            <TableCell className="hidden xl:table-cell">
+              <Input
+                type="date"
+                value={newOperation.fecha_operacion}
+                onChange={(e) => setNewOperation((current) => ({ ...current, fecha_operacion: e.target.value }))}
+                className="h-8 bg-secondary/70 px-2 text-xs"
+                aria-label="Fecha de la nueva operación"
+              />
+            </TableCell>
+            <TableCell>
+              <div className="space-y-1.5">
+                <Select value={newOperation.tipo_operacion} onValueChange={(tipo_operacion) => setNewOperation((current) => ({
+                  ...current,
+                  tipo_operacion,
+                  porcentaje_ganancia: tipo_operacion === "Comisión" ? "100" : current.tipo_operacion === "Comisión" ? "" : current.porcentaje_ganancia,
+                }))}>
+                  <SelectTrigger className="h-8 w-full min-w-0 bg-secondary/70 px-2 text-xs">
+                    <SelectValue placeholder="Tipo de operación" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border z-50">
+                    {operationTypes.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <ClientSelect
+                  clients={clients}
+                  value={newOperation.client_id}
+                  onValueChange={(client_id) => setNewOperation((current) => ({ ...current, client_id }))}
+                />
+                <AccountHolderSelect
+                  accountHolders={accountHolders}
+                  value={newOperation.account_holder_id}
+                  onValueChange={(account_holder_id) => setNewOperation((current) => ({ ...current, account_holder_id }))}
+                />
+              </div>
+            </TableCell>
+            <TableCell>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newOperation.monto_total}
+                onChange={(e) => setNewOperation((current) => ({ ...current, monto_total: e.target.value }))}
+                placeholder="Monto"
+                className="h-8 bg-secondary/70 text-right text-xs"
+                aria-label="Monto de la nueva operación"
+              />
+            </TableCell>
+            <TableCell className="hidden sm:table-cell">
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newOperation.tipo_operacion === "Comisión" ? "100" : newOperation.porcentaje_ganancia}
+                onChange={(e) => setNewOperation((current) => ({ ...current, porcentaje_ganancia: e.target.value }))}
+                disabled={newOperation.tipo_operacion === "Comisión"}
+                placeholder="%"
+                className="h-8 bg-secondary/70 text-right text-xs"
+                aria-label="Porcentaje de ganancia de la nueva operación"
+              />
+            </TableCell>
+            <TableCell className="text-right font-bold text-success text-xs md:text-sm">
+              ${((Number(newOperation.monto_total) || 0) * ((newOperation.tipo_operacion === "Comisión" ? 100 : Number(newOperation.porcentaje_ganancia)) || 0) / 100).toLocaleString("es-ES", { minimumFractionDigits: 2 })}
+            </TableCell>
+            <TableCell className="text-center">
+              <div className="flex justify-center gap-1">
+                <Button type="button" size="icon" className="h-8 w-8" onClick={handleCreate} disabled={creating} aria-label="Crear operación">
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setNewOperation(initialNewOperation())} disabled={creating} aria-label="Limpiar nueva operación">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
           {sortedOperations.map((operation) => {
             const isEditingFecha = editingCell?.id === operation.id && editingCell?.field === "fecha_operacion";
             const isEditingMonto = editingCell?.id === operation.id && editingCell?.field === "monto_total";
