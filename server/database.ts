@@ -98,7 +98,6 @@ const SCHEMA = `
     created_at TEXT NOT NULL
   );
 
-  CREATE INDEX IF NOT EXISTS operations_account_holder_idx ON operations(account_holder_id);
 
   CREATE TABLE IF NOT EXISTS clients (
     id TEXT PRIMARY KEY,
