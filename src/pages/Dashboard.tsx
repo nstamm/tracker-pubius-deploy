@@ -6,7 +6,6 @@ import PeriodFilter, { Period } from "@/components/Dashboard/PeriodFilter";
 import TypeFilter, { OperationType } from "@/components/Dashboard/TypeFilter";
 import GainsChart, { type ChartGrouping, type ChartSeries } from "@/components/Dashboard/GainsChart";
 import CreateOperationDialog from "@/components/Dashboard/CreateOperationDialog";
-import VoiceAssistant from "@/components/VoiceAssistant";
 import OperationsTable from "@/components/Dashboard/OperationsTable";
 import { DollarSign, TrendingUp, Activity, BarChart3, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -315,7 +314,6 @@ const Dashboard = () => {
           </section>
         </div>
 
-        <VoiceAssistant onSuccess={fetchOperations} />
       </main>
     </div>
   );
