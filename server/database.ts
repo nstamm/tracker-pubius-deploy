@@ -9,6 +9,7 @@ export interface OperationInput {
   cuenta_emisora?: string | null;
   cuenta_receptora?: string | null;
   client_id?: string | null;
+  account_holder_id?: string | null;
   monto_total: number;
   porcentaje_ganancia: number;
   tipo_operacion: string;
@@ -40,6 +41,7 @@ interface OperationRow {
   cuenta_emisora: string | null;
   cuenta_receptora: string | null;
   client_id: string | null;
+  account_holder_id: string | null;
   monto_centavos: number;
   porcentaje_puntos: number;
   ganancia_centavos: number;
@@ -52,6 +54,13 @@ interface ClientRow {
   title: string;
   email: string | null;
   phone: string | null;
+  created_at: string;
+}
+
+interface AccountHolderRow {
+  id: string;
+  name: string;
+  bank: string;
   created_at: string;
 }
 
@@ -72,6 +81,7 @@ const SCHEMA = `
     cuenta_emisora TEXT,
     cuenta_receptora TEXT,
     client_id TEXT,
+    account_holder_id TEXT,
     monto_centavos INTEGER NOT NULL CHECK (monto_centavos >= 0),
     porcentaje_puntos INTEGER NOT NULL CHECK (porcentaje_puntos >= 0),
     ganancia_centavos INTEGER NOT NULL CHECK (ganancia_centavos >= 0),
@@ -80,6 +90,15 @@ const SCHEMA = `
   );
 
   CREATE INDEX IF NOT EXISTS operations_fecha_idx ON operations(fecha_operacion DESC);
+
+  CREATE TABLE IF NOT EXISTS account_holders (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    bank TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS operations_account_holder_idx ON operations(account_holder_id);
 
   CREATE TABLE IF NOT EXISTS clients (
     id TEXT PRIMARY KEY,
@@ -127,6 +146,7 @@ function operationFromRow(row: OperationRow) {
     cuenta_emisora: row.cuenta_emisora,
     cuenta_receptora: row.cuenta_receptora,
     client_id: row.client_id,
+    account_holder_id: row.account_holder_id,
     monto_total: fromMinorUnits(row.monto_centavos),
     porcentaje_ganancia: fromMinorUnits(row.porcentaje_puntos),
     ganancia: fromMinorUnits(row.ganancia_centavos),
@@ -176,7 +196,11 @@ export class AppDatabase {
     if (!operationColumns.some((column) => column.name === "client_id")) {
       this.db.exec("ALTER TABLE operations ADD COLUMN client_id TEXT");
     }
+    if (!operationColumns.some((column) => column.name === "account_holder_id")) {
+      this.db.exec("ALTER TABLE operations ADD COLUMN account_holder_id TEXT");
+    }
     this.db.exec("CREATE INDEX IF NOT EXISTS operations_client_idx ON operations(client_id)");
+    this.db.exec("CREATE INDEX IF NOT EXISTS operations_account_holder_idx ON operations(account_holder_id)");
   }
 
   close(): void {
@@ -212,7 +236,7 @@ export class AppDatabase {
     await backup(this.db, destination);
   }
 
-  listOperations(from?: string, to?: string, clientId?: string) {
+  listOperations(from?: string, to?: string, clientId?: string, accountHolderId?: string) {
     const conditions: string[] = [];
     const params: Record<string, string> = {};
     if (from) {
@@ -226,6 +250,10 @@ export class AppDatabase {
     if (clientId) {
       conditions.push("client_id = @clientId");
       params.clientId = clientId;
+    }
+    if (accountHolderId) {
+      conditions.push("account_holder_id = @accountHolderId");
+      params.accountHolderId = accountHolderId;
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
     const rows = this.db.prepare(`SELECT * FROM operations ${where} ORDER BY fecha_operacion DESC`).all(params) as unknown as OperationRow[];
@@ -246,10 +274,10 @@ export class AppDatabase {
 
     this.db.prepare(`
       INSERT INTO operations (
-        id, fecha_operacion, id_operacion, cuenta_emisora, cuenta_receptora, client_id,
+        id, fecha_operacion, id_operacion, cuenta_emisora, cuenta_receptora, client_id, account_holder_id,
         monto_centavos, porcentaje_puntos, ganancia_centavos, tipo_operacion, created_at
       ) VALUES (
-        @id, @fecha_operacion, @id_operacion, @cuenta_emisora, @cuenta_receptora, @client_id,
+        @id, @fecha_operacion, @id_operacion, @cuenta_emisora, @cuenta_receptora, @client_id, @account_holder_id,
         @monto_centavos, @porcentaje_puntos, @ganancia_centavos, @tipo_operacion, @created_at
       )
     `).run({
@@ -259,6 +287,7 @@ export class AppDatabase {
       cuenta_emisora: input.cuenta_emisora || null,
       cuenta_receptora: input.cuenta_receptora || null,
       client_id: input.client_id || null,
+      account_holder_id: input.account_holder_id || null,
       monto_centavos: amount,
       porcentaje_puntos: percentage,
       ganancia_centavos: gain,
@@ -279,6 +308,7 @@ export class AppDatabase {
       cuenta_emisora: "cuenta_emisora" in update ? update.cuenta_emisora ?? null : current.cuenta_emisora,
       cuenta_receptora: "cuenta_receptora" in update ? update.cuenta_receptora ?? null : current.cuenta_receptora,
       client_id: "client_id" in update ? update.client_id ?? null : current.client_id,
+      account_holder_id: "account_holder_id" in update ? update.account_holder_id ?? null : current.account_holder_id,
       monto_total: update.monto_total ?? current.monto_total,
       porcentaje_ganancia: update.porcentaje_ganancia ?? current.porcentaje_ganancia,
       tipo_operacion: update.tipo_operacion ?? current.tipo_operacion,
@@ -294,6 +324,7 @@ export class AppDatabase {
         cuenta_emisora = @cuenta_emisora,
         cuenta_receptora = @cuenta_receptora,
         client_id = @client_id,
+        account_holder_id = @account_holder_id,
         monto_centavos = @monto_centavos,
         porcentaje_puntos = @porcentaje_puntos,
         ganancia_centavos = @ganancia_centavos,
@@ -306,6 +337,7 @@ export class AppDatabase {
       cuenta_emisora: next.cuenta_emisora || null,
       cuenta_receptora: next.cuenta_receptora || null,
       client_id: next.client_id || null,
+      account_holder_id: next.account_holder_id || null,
       monto_centavos: amount,
       porcentaje_puntos: percentage,
       ganancia_centavos: gain,
@@ -317,6 +349,43 @@ export class AppDatabase {
 
   deleteOperation(id: string): boolean {
     return this.db.prepare("DELETE FROM operations WHERE id = ?").run(id).changes > 0;
+  }
+
+  listAccountHolders() {
+    const rows = this.db.prepare("SELECT * FROM account_holders ORDER BY name COLLATE NOCASE").all() as unknown as AccountHolderRow[];
+    return rows;
+  }
+
+  getAccountHolder(id: string) {
+    return this.db.prepare("SELECT * FROM account_holders WHERE id = ?").get(id) as unknown as AccountHolderRow | undefined;
+  }
+
+  createAccountHolder(input: { name: string; bank: string }) {
+    const id = randomUUID();
+    this.db.prepare("INSERT INTO account_holders (id, name, bank, created_at) VALUES (@id, @name, @bank, @created_at)").run({ id, name: input.name, bank: input.bank, created_at: new Date().toISOString() });
+    return this.getAccountHolder(id)!;
+  }
+
+  updateAccountHolder(id: string, update: Partial<{ name: string; bank: string }>) {
+    const current = this.getAccountHolder(id);
+    if (!current) return null;
+    const name = update.name ?? current.name;
+    const bank = update.bank ?? current.bank;
+    this.db.prepare("UPDATE account_holders SET name = @name, bank = @bank WHERE id = @id").run({ id, name, bank });
+    return this.getAccountHolder(id)!;
+  }
+
+  deleteAccountHolder(id: string): boolean {
+    this.db.exec("BEGIN");
+    try {
+      this.db.prepare("UPDATE operations SET account_holder_id = NULL WHERE account_holder_id = ?").run(id);
+      const deleted = this.db.prepare("DELETE FROM account_holders WHERE id = ?").run(id).changes > 0;
+      this.db.exec("COMMIT");
+      return deleted;
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   listClients() {
