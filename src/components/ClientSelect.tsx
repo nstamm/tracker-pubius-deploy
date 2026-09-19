@@ -41,20 +41,20 @@ const ClientSelect = ({ clients, value, onValueChange, className }: ClientSelect
         >
           <span className="flex min-w-0 items-center gap-1.5">
             <UserRound className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <span className="truncate">{selectedClient?.title ?? "Sin cliente"}</span>
+            <span className="truncate">{selectedClient?.title ?? "Sin titular"}</span>
           </span>
           <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] min-w-60 p-0">
         <Command>
-          <CommandInput placeholder="Buscar cliente..." />
+          <CommandInput placeholder="Buscar titular..." />
           <CommandList>
-            <CommandEmpty>No se encontraron clientes.</CommandEmpty>
+            <CommandEmpty>No se encontraron titulares.</CommandEmpty>
             <CommandGroup>
-              <CommandItem value="sin cliente" onSelect={() => selectClient(null)}>
+              <CommandItem value="sin titular" onSelect={() => selectClient(null)}>
                 <Check className={cn("mr-2 h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
-                Sin cliente
+                Sin titular
               </CommandItem>
               {clients.map((client) => (
                 <CommandItem
