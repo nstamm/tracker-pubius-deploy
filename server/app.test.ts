@@ -373,4 +373,34 @@ describe("financial records", () => {
       "2026-08-01",
     ]);
   });
+  it("keeps account holders separate from operation clients", async () => {
+    const app = await createTestApp();
+    const cookie = await login(app);
+    const accountHolder = await app.inject({
+      method: "POST",
+      url: "/api/account-holders",
+      headers: { cookie },
+      payload: { name: "Ana", bank: "Mercury" },
+    });
+    expect(accountHolder.statusCode).toBe(201);
+    const holderId = accountHolder.json().id;
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/operations",
+      headers: { cookie },
+      payload: { fecha_operacion: "2026-08-26", monto_total: 100, porcentaje_ganancia: 2, tipo_operacion: "Zelle", account_holder_id: holderId },
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json()).toMatchObject({ account_holder_id: holderId, client_id: null });
+
+    const filtered = await app.inject({
+      method: "GET",
+      url: `/api/operations?accountHolderId=${holderId}`,
+      headers: { cookie },
+    });
+    expect(filtered.json()).toHaveLength(1);
+  });
+
+
 });
