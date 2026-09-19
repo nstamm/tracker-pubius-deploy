@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { api, type Operation } from "@/lib/api";
+import { api, type AccountHolder, type Operation } from "@/lib/api";
 import type { Client } from "@/lib/api";
 import MetricCard from "@/components/Dashboard/MetricCard";
 import PeriodFilter, { Period } from "@/components/Dashboard/PeriodFilter";
@@ -11,6 +11,7 @@ import OperationsTable from "@/components/Dashboard/OperationsTable";
 import { DollarSign, TrendingUp, Activity, BarChart3, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatLocalDate } from "@/lib/utils";
 
@@ -18,9 +19,13 @@ const Dashboard = () => {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [previousOperations, setPreviousOperations] = useState<Operation[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [period, setPeriod] = useState<Period>("month");
+  const [accountHolders, setAccountHolders] = useState<AccountHolder[]>([]);
+  const [period, setPeriod] = useState<Period>("currentmonth");
   const [typeFilter, setTypeFilter] = useState<OperationType>("all");
   const [clientFilter, setClientFilter] = useState("all");
+  const [accountHolderFilter, setAccountHolderFilter] = useState("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [chartGrouping, setChartGrouping] = useState<ChartGrouping>("type");
   const [loading, setLoading] = useState(true);
 
@@ -35,6 +40,20 @@ const Dashboard = () => {
       let currentEndDate: Date | undefined;
       
       switch (period) {
+        case "currentmonth":
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          currentEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          prevStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          prevEndDate = new Date(now.getFullYear(), now.getMonth(), 0);
+          break;
+        case "custom":
+          startDate = customFrom ? new Date(`${customFrom}T00:00:00`) : new Date(now.getFullYear(), now.getMonth(), 1);
+          currentEndDate = customTo ? new Date(`${customTo}T00:00:00`) : now;
+          prevStartDate = new Date(startDate);
+          prevStartDate.setFullYear(prevStartDate.getFullYear() - 1);
+          prevEndDate = new Date(currentEndDate);
+          prevEndDate.setFullYear(prevEndDate.getFullYear() - 1);
+          break;
         case "week":
           startDate.setDate(now.getDate() - 7);
           prevStartDate.setDate(now.getDate() - 14);
@@ -69,10 +88,8 @@ const Dashboard = () => {
       const currentFilters = period === "all"
         ? {}
         : {
-            from: startDate.toISOString().split("T")[0],
-            ...(period === "prevmonth" && currentEndDate
-              ? { to: currentEndDate.toISOString().split("T")[0] }
-              : {}),
+            from: period === "custom" && customFrom ? customFrom : startDate.toISOString().split("T")[0],
+            ...(currentEndDate ? { to: period === "custom" && customTo ? customTo : currentEndDate.toISOString().split("T")[0] } : {}),
           };
       const previousFilters = period === "all"
         ? null
@@ -81,8 +98,8 @@ const Dashboard = () => {
             to: prevEndDate.toISOString().split("T")[0],
           };
       const [current, previous] = await Promise.all([
-        api.operations.list({ ...currentFilters, ...(clientFilter === "all" ? {} : { clientId: clientFilter }) }),
-        previousFilters ? api.operations.list({ ...previousFilters, ...(clientFilter === "all" ? {} : { clientId: clientFilter }) }) : Promise.resolve([]),
+        api.operations.list({ ...currentFilters, ...(clientFilter === "all" ? {} : { clientId: clientFilter }), ...(accountHolderFilter === "all" ? {} : { accountHolderId: accountHolderFilter }) }),
+        previousFilters ? api.operations.list({ ...previousFilters, ...(clientFilter === "all" ? {} : { clientId: clientFilter }), ...(accountHolderFilter === "all" ? {} : { accountHolderId: accountHolderFilter }) }) : Promise.resolve([]),
       ]);
       setOperations(current);
       setPreviousOperations(previous);
@@ -91,10 +108,11 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [period, clientFilter]);
+  }, [period, clientFilter, accountHolderFilter, customFrom, customTo]);
 
   useEffect(() => {
     api.clients.list().then(setClients).catch((error) => console.error("Error fetching clients:", error));
+    api.accountHolders.list().then(setAccountHolders).catch((error) => console.error("Error fetching account holders:", error));
   }, []);
 
   useEffect(() => {
@@ -208,7 +226,7 @@ const Dashboard = () => {
             <div className="grid grid-cols-2 gap-2 sm:flex">
               <PeriodFilter value={period} onChange={setPeriod} />
               <TypeFilter value={typeFilter} onChange={setTypeFilter} />
-              <Select value={clientFilter} onValueChange={setClientFilter}>
+<Select value={clientFilter} onValueChange={setClientFilter}>
                 <SelectTrigger className="w-full bg-secondary sm:w-[180px]">
                   <SelectValue placeholder="Cliente" />
                 </SelectTrigger>
@@ -217,8 +235,19 @@ const Dashboard = () => {
                   {clients.map((client) => <SelectItem key={client.id} value={client.id}>{client.title}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <Select value={accountHolderFilter} onValueChange={setAccountHolderFilter}>
+                <SelectTrigger className="w-full bg-secondary sm:w-[190px]"><SelectValue placeholder="Titular de cuenta" /></SelectTrigger>
+                <SelectContent className="z-50 border-border bg-popover">
+                  <SelectItem value="all">Todas las cuentas</SelectItem>
+                  {accountHolders.map((holder) => <SelectItem key={holder.id} value={holder.id}>{holder.name} · {holder.bank}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {period === "custom" && <>
+                <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="bg-secondary" aria-label="Desde" />
+                <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="bg-secondary" aria-label="Hasta" />
+              </>}
             </div>
-            <CreateOperationDialog clients={clients} onSuccess={fetchOperations} />
+            <CreateOperationDialog clients={clients} accountHolders={accountHolders} onSuccess={fetchOperations} />
           </div>
         </div>
 
@@ -250,7 +279,7 @@ const Dashboard = () => {
                   No hay operaciones en este período
                 </p>
               ) : (
-                <OperationsTable clients={clients} operations={filteredOperations} onUpdate={fetchOperations} onDelete={fetchOperations} />
+                <OperationsTable clients={clients} accountHolders={accountHolders} operations={filteredOperations} onUpdate={fetchOperations} onDelete={fetchOperations} />
               )}
             </CardContent>
           </Card>
