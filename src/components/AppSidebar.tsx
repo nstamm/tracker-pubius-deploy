@@ -25,6 +25,7 @@ const menuItems = [
   { title: "Binance P2P", url: "/binance-p2p", icon: ArrowLeftRight },
   { title: "Egresos", url: "/expenses", icon: Wallet },
   { title: "Titulares de cuenta", url: "/accounts", icon: UsersRound },
+  { title: "Clientes", url: "/clients", icon: UsersRound },
 ];
 
 export function AppSidebar() {
