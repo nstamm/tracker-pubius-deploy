@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Pencil, Check, X, Eye } from "lucide-react";
 import { api, getErrorMessage, type OperationInput } from "@/lib/api";
-import type { Client } from "@/lib/api";
+import type { AccountHolder, Client } from "@/lib/api";
 import ClientSelect from "@/components/ClientSelect";
+import AccountHolderSelect from "@/components/AccountHolderSelect";
 import { toast } from "sonner";
 import { formatLocalDate } from "@/lib/utils";
 import {
@@ -38,6 +39,7 @@ interface Operation {
   cuenta_emisora: string;
   cuenta_receptora: string;
   client_id: string | null;
+  account_holder_id: string | null;
   monto_total: number;
   porcentaje_ganancia: number;
   ganancia: number;
@@ -47,11 +49,12 @@ interface Operation {
 interface OperationsTableProps {
   operations: Operation[];
   clients: Client[];
+  accountHolders: AccountHolder[];
   onUpdate: () => void;
   onDelete: () => void;
 }
 
-type EditableOperationField = "fecha_operacion" | "monto_total" | "porcentaje_ganancia" | "tipo_operacion" | "client_id";
+type EditableOperationField = "fecha_operacion" | "monto_total" | "porcentaje_ganancia" | "tipo_operacion" | "client_id" | "account_holder_id";
 
 const getTypeBadgeColor = (tipo: string) => {
   const lowerTipo = tipo?.toLowerCase() || "";
@@ -68,7 +71,7 @@ const getTypeBadgeColor = (tipo: string) => {
   return "bg-muted text-muted-foreground border-border";
 };
 
-const OperationsTable = ({ clients, operations, onUpdate, onDelete }: OperationsTableProps) => {
+const OperationsTable = ({ clients, accountHolders, operations, onUpdate, onDelete }: OperationsTableProps) => {
   const [editingCell, setEditingCell] = useState<{ id: string; field: EditableOperationField } | null>(null);
   const [editValue, setEditValue] = useState<string | number>("");
   const [selectedOperation, setSelectedOperation] = useState<Operation | null>(null);
@@ -286,6 +289,11 @@ const OperationsTable = ({ clients, operations, onUpdate, onDelete }: Operations
                       clients={clients}
                       value={operation.client_id}
                       onValueChange={(client_id) => saveField(operation.id, "client_id", client_id, operation)}
+                    />
+                    <AccountHolderSelect
+                      accountHolders={accountHolders}
+                      value={operation.account_holder_id}
+                      onValueChange={(account_holder_id) => saveField(operation.id, "account_holder_id", account_holder_id, operation)}
                     />
                   </div>
                 </TableCell>

@@ -30,9 +30,15 @@ const operationSchema = z.object({
   cuenta_emisora: z.string().max(200).nullable().optional(),
   cuenta_receptora: z.string().max(200).nullable().optional(),
   client_id: z.string().uuid().nullable().optional(),
+  account_holder_id: z.string().uuid().nullable().optional(),
   monto_total: z.number().finite().nonnegative().max(1_000_000_000),
   porcentaje_ganancia: z.number().finite().nonnegative().max(100),
   tipo_operacion: z.string().min(1).max(100),
+});
+
+const accountHolderSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  bank: z.string().trim().min(1).max(120),
 });
 
 const clientSchema = z.object({
@@ -238,12 +244,12 @@ export async function buildApp(options: AppOptions) {
 
   app.get("/api/operations", async (request, reply) => {
     const query = parseBody(
-      z.object({ from: dateSchema.optional(), to: dateSchema.optional(), clientId: z.string().uuid().optional() }),
+      z.object({ from: dateSchema.optional(), to: dateSchema.optional(), clientId: z.string().uuid().optional(), accountHolderId: z.string().uuid().optional() }),
       request.query,
       reply,
     );
     if (!query) return;
-    return database.listOperations(query.from, query.to, query.clientId);
+    return database.listOperations(query.from, query.to, query.clientId, query.accountHolderId);
   });
 
   app.post("/api/operations", async (request, reply) => {
@@ -251,6 +257,9 @@ export async function buildApp(options: AppOptions) {
     if (!input) return;
     if (input.client_id && !database.getClient(input.client_id)) {
       return reply.code(400).send({ error: "Cliente no encontrado" });
+    }
+    if (input.account_holder_id && !database.getAccountHolder(input.account_holder_id)) {
+      return reply.code(400).send({ error: "Titular de cuenta no encontrado" });
     }
     return reply.code(201).send(database.createOperation(input));
   });
@@ -261,6 +270,9 @@ export async function buildApp(options: AppOptions) {
     if (update.client_id && !database.getClient(update.client_id)) {
       return reply.code(400).send({ error: "Cliente no encontrado" });
     }
+    if (update.account_holder_id && !database.getAccountHolder(update.account_holder_id)) {
+      return reply.code(400).send({ error: "Titular de cuenta no encontrado" });
+    }
     const operation = database.updateOperation(request.params.id, update);
     return operation ?? reply.code(404).send({ error: "Operación no encontrada" });
   });
@@ -268,6 +280,28 @@ export async function buildApp(options: AppOptions) {
   app.delete<{ Params: { id: string } }>("/api/operations/:id", async (request, reply) => {
     if (!database.deleteOperation(request.params.id)) {
       return reply.code(404).send({ error: "Operación no encontrada" });
+    }
+    return reply.code(204).send();
+  });
+
+  app.get("/api/account-holders", async () => database.listAccountHolders());
+
+  app.post("/api/account-holders", async (request, reply) => {
+    const input = parseBody(accountHolderSchema, request.body, reply);
+    if (!input) return;
+    return reply.code(201).send(database.createAccountHolder(input));
+  });
+
+  app.patch<{ Params: { id: string } }>("/api/account-holders/:id", async (request, reply) => {
+    const update = parseBody(accountHolderSchema.partial().refine((value) => Object.keys(value).length > 0), request.body, reply);
+    if (!update) return;
+    const accountHolder = database.updateAccountHolder(request.params.id, update);
+    return accountHolder ?? reply.code(404).send({ error: "Titular de cuenta no encontrado" });
+  });
+
+  app.delete<{ Params: { id: string } }>("/api/account-holders/:id", async (request, reply) => {
+    if (!database.deleteAccountHolder(request.params.id)) {
+      return reply.code(404).send({ error: "Titular de cuenta no encontrado" });
     }
     return reply.code(204).send();
   });

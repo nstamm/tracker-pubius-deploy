@@ -50,7 +50,7 @@ const ClientSelect = ({ clients, value, onValueChange, className }: ClientSelect
         <Command>
           <CommandInput placeholder="Buscar cliente..." />
           <CommandList>
-            <CommandEmpty>No se encontraron clientes.</CommandEmpty>
+            <CommandEmpty>No se encontraron clientees.</CommandEmpty>
             <CommandGroup>
               <CommandItem value="sin cliente" onSelect={() => selectClient(null)}>
                 <Check className={cn("mr-2 h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
