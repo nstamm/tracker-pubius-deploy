@@ -8,11 +8,13 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ArrowUpRight, Plus, Sparkles } from "lucide-react";
 import ClientSelect from "@/components/ClientSelect";
-import type { Client } from "@/lib/api";
+import AccountHolderSelect from "@/components/AccountHolderSelect";
+import type { AccountHolder, Client } from "@/lib/api";
 
 interface CreateOperationDialogProps {
   onSuccess: () => void;
   clients: Client[];
+  accountHolders: AccountHolder[];
 }
 
 const operationTypes = [
@@ -35,6 +37,7 @@ const initialFormData = () => ({
   cuenta_emisora: "",
   cuenta_receptora: "",
   client_id: null as string | null,
+  account_holder_id: null as string | null,
   monto_total: "",
   porcentaje_ganancia: "",
   tipo_operacion: "",
@@ -51,7 +54,7 @@ const formatAmount = (value: string): string => {
 
 const amountToNumber = (value: string): number => Number(value.replace(/\./g, "").replace(",", "."));
 
-const CreateOperationDialog = ({ clients, onSuccess }: CreateOperationDialogProps) => {
+const CreateOperationDialog = ({ clients, accountHolders, onSuccess }: CreateOperationDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
@@ -79,6 +82,7 @@ const CreateOperationDialog = ({ clients, onSuccess }: CreateOperationDialogProp
         cuenta_emisora: formData.cuenta_emisora,
         cuenta_receptora: formData.cuenta_receptora,
         client_id: formData.client_id,
+        account_holder_id: formData.account_holder_id,
         monto_total: amount,
         porcentaje_ganancia: percentage,
         tipo_operacion: formData.tipo_operacion,
@@ -195,9 +199,13 @@ const CreateOperationDialog = ({ clients, onSuccess }: CreateOperationDialogProp
             </div>
 
             <div className="grid grid-cols-2 gap-2.5 border-t border-border/60 pt-3">
-              <div className="col-span-2 space-y-1">
+              <div className="space-y-1">
                 <Label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Cliente</Label>
                 <ClientSelect clients={clients} value={formData.client_id} onValueChange={(client_id) => setFormData((current) => ({ ...current, client_id }))} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Titular de cuenta</Label>
+                <AccountHolderSelect accountHolders={accountHolders} value={formData.account_holder_id} onValueChange={(account_holder_id) => setFormData((current) => ({ ...current, account_holder_id }))} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="fecha" className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Fecha</Label>
